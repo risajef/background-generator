@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Generate sampler set",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generateAll.ts",
+                "--count",
+                "3"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}
