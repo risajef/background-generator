@@ -18,6 +18,103 @@
                 "3"
             ],
             "console": "integratedTerminal"
+        },
+        {
+            "name": "Generate background",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generateBackground.ts",
+                "--count",
+                "3",
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Generate botanical",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generateBotanical.ts",
+                "--count",
+                "3",
+                "--noise"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Generate polygalaxy",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generatePolygalaxy.ts",
+                "--count",
+                "3",
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Generate terrain",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generateTerrain.ts",
+                "--count",
+                "3",
+                "--fog",
+                "--noise"
+            ],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Generate skyline",
+            "type": "node",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": [
+                "ts-node",
+                "--compiler-options",
+                "{\"module\":\"CommonJS\"}"
+            ],
+            "args": [
+                "${workspaceFolder}/ts/generateSkyline.ts",
+                "--count",
+                "3",
+                "--layers",
+                "4",
+                "--window-density",
+                "0.6"
+            ],
+            "console": "integratedTerminal"
         }
     ]
 }

@@ -1,6 +1,6 @@
 # Background Generator Suite
 
-Procedural art playground written in TypeScript. It includes multiple SVG generators (gradient abstractions, galaxy shards, painted terrains, and now neon skylines), lightweight CLIs for batch rendering, optional PNG export via `sharp`, and a minimal browser UI for live previews.
+Procedural art playground written in TypeScript. It includes multiple SVG generators (gradient abstractions, polygalaxy shards, painted terrains, neon skylines, and lush botanical gardens), lightweight CLIs for batch rendering, optional PNG export via `sharp`, and a minimal browser UI for live previews.
 
 ## Requirements
 
@@ -27,7 +27,11 @@ Options mirror the parameters inside `ts/lib/background.ts` so every geometric l
 npx ts-node ts/generatePolygalaxy.ts --theme aurora --style loom --stars 600 --scanlines
 ```
 
-List available styles and themes by inspecting `POLYGALAXY_THEMES`/`POLYGALAXY_STYLES` in `ts/lib/polygalaxy.ts`.
+Highlights:
+
+- `--systems`, `--arms`, and `--planets` steer the new orbital clusters and spiral arms if you want denser solar system layouts.
+- The classic knobs (`--stars`, `--rings`, `--threads`, etc.) still override the style ranges.
+- List available styles and themes by inspecting `POLYGALAXY_THEMES`/`POLYGALAXY_STYLES` in `ts/lib/polygalaxy.ts`.
 
 ### Terrain Landscapes
 
@@ -53,6 +57,19 @@ Key flags:
 - `--no-png` skips the heavyweight PNG conversions when you're just exploring SVGs.
 - `--list-themes` enumerates the available skyline palettes from `SKYLINE_THEMES`.
 
+### Botanical Gardens (new)
+
+```
+npx ts-node ts/generateBotanical.ts --theme canopy --leaves 40 --fronds 18 --blooms 10 --noise
+```
+
+Highlights:
+
+- `--theme` accepts explicit palette keys or `random` (see `BOTANICAL_THEMES`).
+- Abundance knobs (`--leaves`, `--fronds`, `--vines`, `--blooms`, `--dew`, `--ground-layers`) override the curated ranges.
+- `--veil` / `--no-veil` toggles the atmospheric overlay, while `--noise` sprinkles film grain.
+- `--list-themes` prints the available greenhouse palettes.
+
 ### Batch All Generators
 
 Want a quick sampler set? The helper script renders every generator `n` times (defaults to three) and converts the SVGs to PNGs.
@@ -64,7 +81,7 @@ npx ts-node ts/generateAll.ts --count 3
 Flags:
 
 - `--width/--height` override the default 5120×1440 canvas for every generator.
-- `--seed` ensures repeatable runs across all four generators.
+- `--seed` ensures repeatable runs across all five generators.
 - `--no-png` limits the job to SVGs if you do not have `sharp` installed or just want faster output.
 
 ## Web Preview
