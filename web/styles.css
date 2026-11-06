@@ -1,49 +1,39 @@
-:root {
+.background-generator-app {
     font-family: 'Inter', Arial, Helvetica, sans-serif;
     line-height: 1.4;
-}
-
-body {
+}.background-generator-app {
     margin: 1rem;
     color: #1A1A1A;
     background-color: #FFFFFF;
-}
-
-h1, h2, h3, h4, strong {
+}.background-generator-app h1,
+.background-generator-app h2,
+.background-generator-app h3,
+.background-generator-app h4,
+.background-generator-app strong {
     font-family: 'Gidole', 'Inter', Arial, sans-serif;
     color: #8B0000;
-}
-
-main {
+}.background-generator-app {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     align-items: start;
-}
-
-form {
+}.background-generator-app form {
     display: grid;
     gap: 0.75rem;
-}
-
-fieldset {
+}.background-generator-app fieldset {
     border: 1px solid #888888;
     border-radius: 2px;
     padding: 0.75rem;
     background: #FFFFFF;
-}
-
-label {
+}.background-generator-app label {
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     font-size: 0.95rem;
     color: #1A1A1A;
-}
-
-input,
-select,
-textarea {
+}.background-generator-app input,
+.background-generator-app select,
+.background-generator-app textarea {
     font-family: 'Inter', Arial, sans-serif;
     font-size: 0.9rem;
     padding: 0.4rem 0.6rem;
@@ -52,16 +42,12 @@ textarea {
     background-color: #FFFFFF;
     color: #1A1A1A;
     outline: none;
-}
-
-input:focus,
-select:focus,
-textarea:focus {
+}.background-generator-app input:focus,
+.background-generator-app select:focus,
+.background-generator-app textarea:focus {
     border-color: #8B0000;
     box-shadow: 0 0 0 1px #8B0000;
-}
-
-button {
+}.background-generator-app button {
     font-family: 'Inter', Arial, sans-serif;
     font-size: 0.9rem;
     font-weight: 500;
@@ -72,64 +58,46 @@ button {
     color: #FFFFFF;
     cursor: pointer;
     transition: background-color 0.15s ease;
-}
-
-button:hover:not(:disabled) {
+}.background-generator-app button:hover:not(:disabled) {
     background-color: #A11212;
     border-color: #A11212;
-}
-
-button:disabled {
+}.background-generator-app button:disabled {
     cursor: not-allowed;
     opacity: 0.5;
     background-color: #888888;
     border-color: #888888;
-}
-
-.preview-panel {
+}.background-generator-app .preview-panel {
     border: 1px solid #bbb;
     padding: 0.5rem;
     min-height: 320px;
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-}
-
-.preview-panel header {
+}.background-generator-app .preview-panel header {
     display: flex;
     align-items: start;
     justify-content: space-between;
     gap: 0.75rem;
     flex-wrap: wrap;
-}
-
-.preview-actions {
+}.background-generator-app .preview-actions {
     display: flex;
     gap: 0.5rem;
     flex-wrap: wrap;
-}
-
-#meta {
+}.background-generator-app [data-role="meta"] {
     color: #555;
     font-size: 0.9rem;
     margin-top: 0.2rem;
-}
-
-.preview-area {
+}.background-generator-app .preview-area {
     border: 1px dashed #aaa;
     min-height: 240px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #fafafa;
-}
-
-.preview-area svg {
+}.background-generator-app .preview-area svg {
     width: 100%;
     height: auto;
-}
-
-textarea {
+}.background-generator-app textarea {
     width: 100%;
     min-height: 160px;
     resize: vertical;

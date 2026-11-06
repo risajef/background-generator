@@ -2062,236 +2062,259 @@ var GENERATORS = {
     }
   }
 };
-var form = document.getElementById("generator-form");
-var generatorSelect = document.getElementById("generator-select");
-var fieldsContainer = document.getElementById("dynamic-fields");
-var preview = document.getElementById("preview");
-var meta = document.getElementById("meta");
-var output = document.getElementById("svg-output");
-var downloadSvgButton = document.getElementById("download-svg");
-var downloadPngButton = document.getElementById("download-png");
-var lastGeneratedAsset = null;
-function init() {
-  Object.entries(GENERATORS).forEach(([key, config]) => {
-    const option = document.createElement("option");
-    option.value = key;
-    option.textContent = config.label;
-    generatorSelect.append(option);
-  });
-  generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")));
-  renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
-  form.addEventListener("submit", handleSubmit);
-  downloadSvgButton.addEventListener("click", handleSvgDownload);
-  downloadPngButton.addEventListener("click", () => {
-    void handlePngDownload();
-  });
-  setDownloadState(false);
-}
-function renderFields(generatorKey) {
-  const config = GENERATORS[generatorKey];
-  fieldsContainer.innerHTML = "";
-  config.fields.forEach((field) => {
-    const label = document.createElement("label");
-    label.htmlFor = field.key;
-    label.textContent = field.label;
-    let input;
-    if (field.type === "select") {
-      const select = document.createElement("select");
-      select.name = field.key;
-      select.id = field.key;
-      field.options?.forEach((opt) => {
-        const option = document.createElement("option");
-        option.value = opt.value;
-        option.textContent = opt.label;
-        select.append(option);
-      });
-      if (field.defaultValue) {
-        select.value = String(field.defaultValue);
-      }
-      input = select;
-    } else {
-      const inputEl = document.createElement("input");
-      inputEl.type = field.type === "checkbox" ? "checkbox" : field.type;
-      inputEl.name = field.key;
-      inputEl.id = field.key;
-      if (field.type === "number" && typeof field.defaultValue === "number") {
-        inputEl.value = String(field.defaultValue);
-      }
-      if (field.type === "text" && typeof field.defaultValue === "string") {
-        inputEl.value = field.defaultValue;
-      }
-      if (field.type === "checkbox" && typeof field.defaultValue === "boolean") {
-        inputEl.checked = field.defaultValue;
-      }
-      if (field.placeholder) {
-        inputEl.placeholder = field.placeholder;
-      }
-      if (field.min !== void 0) {
-        inputEl.min = String(field.min);
-      }
-      if (field.max !== void 0) {
-        inputEl.max = String(field.max);
-      }
-      if (field.step !== void 0) {
-        inputEl.step = String(field.step);
-      }
-      input = inputEl;
-    }
-    label.append(input);
-    fieldsContainer.append(label);
-  });
-}
-function handleSubmit(event) {
-  event.preventDefault();
-  const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
-  const config = GENERATORS[generatorKey];
-  const values = collectValues(config.fields);
-  try {
-    const result = config.run(values);
-    preview.innerHTML = result.svg;
-    meta.textContent = result.meta;
-    output.value = result.svg;
-    lastGeneratedAsset = { generatorKey, svg: result.svg };
-    setDownloadState(true);
-  } catch (error) {
-    lastGeneratedAsset = null;
+var mounts = /* @__PURE__ */ new WeakMap();
+var mountCounter = 0;
+function mount(root) {
+  const existing = mounts.get(root);
+  if (existing) return existing;
+  const events = new AbortController();
+  const instancePrefix = `background-ui-${++mountCounter}`;
+  function element(role) {
+    const found = root.querySelector(`[data-role="${role}"]`);
+    if (!found) throw new Error(`Missing background generator element: ${role}`);
+    return found;
+  }
+  const form = element("generator-form");
+  const generatorSelect = element("generator-select");
+  const fieldsContainer = element("dynamic-fields");
+  const preview = element("preview");
+  const meta = element("meta");
+  const output = element("svg-output");
+  const downloadSvgButton = element("download-svg");
+  const downloadPngButton = element("download-png");
+  let lastGeneratedAsset = null;
+  function init() {
+    Object.entries(GENERATORS).forEach(([key, config]) => {
+      const option = document.createElement("option");
+      option.value = key;
+      option.textContent = config.label;
+      generatorSelect.append(option);
+    });
+    generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")), { signal: events.signal });
+    renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
+    form.addEventListener("submit", handleSubmit, { signal: events.signal });
+    downloadSvgButton.addEventListener("click", handleSvgDownload, { signal: events.signal });
+    downloadPngButton.addEventListener("click", () => {
+      void handlePngDownload();
+    }, { signal: events.signal });
     setDownloadState(false);
-    meta.textContent = "Generation failed. Check console for details.";
-    console.error(error);
   }
-}
-function handleSvgDownload() {
-  if (!lastGeneratedAsset) {
-    return;
+  function renderFields(generatorKey) {
+    const config = GENERATORS[generatorKey];
+    fieldsContainer.innerHTML = "";
+    config.fields.forEach((field) => {
+      const label = document.createElement("label");
+      label.htmlFor = `${instancePrefix}-${field.key}`;
+      label.textContent = field.label;
+      let input;
+      if (field.type === "select") {
+        const select = document.createElement("select");
+        select.name = field.key;
+        select.id = `${instancePrefix}-${field.key}`;
+        field.options?.forEach((opt) => {
+          const option = document.createElement("option");
+          option.value = opt.value;
+          option.textContent = opt.label;
+          select.append(option);
+        });
+        if (field.defaultValue) {
+          select.value = String(field.defaultValue);
+        }
+        input = select;
+      } else {
+        const inputEl = document.createElement("input");
+        inputEl.type = field.type === "checkbox" ? "checkbox" : field.type;
+        inputEl.name = field.key;
+        inputEl.id = `${instancePrefix}-${field.key}`;
+        if (field.type === "number" && typeof field.defaultValue === "number") {
+          inputEl.value = String(field.defaultValue);
+        }
+        if (field.type === "text" && typeof field.defaultValue === "string") {
+          inputEl.value = field.defaultValue;
+        }
+        if (field.type === "checkbox" && typeof field.defaultValue === "boolean") {
+          inputEl.checked = field.defaultValue;
+        }
+        if (field.placeholder) {
+          inputEl.placeholder = field.placeholder;
+        }
+        if (field.min !== void 0) {
+          inputEl.min = String(field.min);
+        }
+        if (field.max !== void 0) {
+          inputEl.max = String(field.max);
+        }
+        if (field.step !== void 0) {
+          inputEl.step = String(field.step);
+        }
+        input = inputEl;
+      }
+      label.append(input);
+      fieldsContainer.append(label);
+    });
   }
-  const blob = new Blob([lastGeneratedAsset.svg], { type: "image/svg+xml;charset=utf-8" });
-  triggerDownload(blob, buildDownloadFilename("svg"));
-}
-async function handlePngDownload() {
-  if (!lastGeneratedAsset) {
-    return;
+  function handleSubmit(event) {
+    event.preventDefault();
+    const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
+    const config = GENERATORS[generatorKey];
+    const values = collectValues(config.fields);
+    try {
+      const result = config.run({ ...values, idPrefix: instancePrefix });
+      preview.innerHTML = result.svg;
+      meta.textContent = result.meta;
+      output.value = result.svg;
+      lastGeneratedAsset = { generatorKey, svg: result.svg };
+      setDownloadState(true);
+    } catch (error) {
+      lastGeneratedAsset = null;
+      setDownloadState(false);
+      meta.textContent = "Generation failed. Check console for details.";
+      console.error(error);
+    }
   }
-  downloadPngButton.disabled = true;
-  try {
-    const blob = await renderSvgAsPng(lastGeneratedAsset.svg);
-    triggerDownload(blob, buildDownloadFilename("png"));
-  } catch (error) {
-    meta.textContent = "PNG export failed. Check console for details.";
-    console.error(error);
-  } finally {
-    downloadPngButton.disabled = lastGeneratedAsset === null;
+  function handleSvgDownload() {
+    if (!lastGeneratedAsset) {
+      return;
+    }
+    const blob = new Blob([lastGeneratedAsset.svg], { type: "image/svg+xml;charset=utf-8" });
+    triggerDownload(blob, buildDownloadFilename("svg"));
   }
-}
-function setDownloadState(enabled) {
-  downloadSvgButton.disabled = !enabled;
-  downloadPngButton.disabled = !enabled;
-}
-function buildDownloadFilename(format) {
-  const generatorKey = lastGeneratedAsset?.generatorKey ?? "generator";
-  const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-  return `${generatorKey}-${timestamp}.${format}`;
-}
-function triggerDownload(blob, filename) {
-  const objectUrl = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = objectUrl;
-  anchor.download = filename;
-  document.body.append(anchor);
-  anchor.click();
-  anchor.remove();
-  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-}
-async function renderSvgAsPng(svg) {
-  const { width, height } = parseSvgDimensions(svg);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(width));
-  canvas.height = Math.max(1, Math.round(height));
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("Canvas 2D context is unavailable.");
+  async function handlePngDownload() {
+    if (!lastGeneratedAsset) {
+      return;
+    }
+    downloadPngButton.disabled = true;
+    try {
+      const blob = await renderSvgAsPng(lastGeneratedAsset.svg);
+      triggerDownload(blob, buildDownloadFilename("png"));
+    } catch (error) {
+      meta.textContent = "PNG export failed. Check console for details.";
+      console.error(error);
+    } finally {
+      downloadPngButton.disabled = lastGeneratedAsset === null;
+    }
   }
-  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-  const objectUrl = URL.createObjectURL(svgBlob);
-  try {
-    const image = await loadSvgImage(objectUrl);
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  } finally {
-    URL.revokeObjectURL(objectUrl);
+  function setDownloadState(enabled) {
+    downloadSvgButton.disabled = !enabled;
+    downloadPngButton.disabled = !enabled;
   }
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) {
-        resolve(blob);
+  function buildDownloadFilename(format) {
+    const generatorKey = lastGeneratedAsset?.generatorKey ?? "generator";
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+    return `${generatorKey}-${timestamp}.${format}`;
+  }
+  function triggerDownload(blob, filename) {
+    const objectUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = objectUrl;
+    anchor.download = filename;
+    document.body.append(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+  }
+  async function renderSvgAsPng(svg) {
+    const { width, height } = parseSvgDimensions(svg);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(width));
+    canvas.height = Math.max(1, Math.round(height));
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Canvas 2D context is unavailable.");
+    }
+    const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const objectUrl = URL.createObjectURL(svgBlob);
+    try {
+      const image = await loadSvgImage(objectUrl);
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    } finally {
+      URL.revokeObjectURL(objectUrl);
+    }
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) {
+          resolve(blob);
+          return;
+        }
+        reject(new Error("Canvas could not encode the generated PNG."));
+      }, "image/png");
+    });
+  }
+  function loadSvgImage(url) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("Generated SVG could not be decoded for PNG export."));
+      image.src = url;
+    });
+  }
+  function parseSvgDimensions(svg) {
+    const svgDocument = new DOMParser().parseFromString(svg, "image/svg+xml");
+    if (svgDocument.querySelector("parsererror")) {
+      throw new Error("Generated SVG markup is invalid.");
+    }
+    const svgElement = svgDocument.documentElement;
+    const width = parseSvgLength(svgElement.getAttribute("width"));
+    const height = parseSvgLength(svgElement.getAttribute("height"));
+    if (width !== null && height !== null) {
+      return { width, height };
+    }
+    const viewBox = svgElement.getAttribute("viewBox");
+    if (!viewBox) {
+      throw new Error("Generated SVG is missing width and height metadata.");
+    }
+    const values = viewBox.split(/[\s,]+/).map((value) => Number.parseFloat(value)).filter((value) => Number.isFinite(value));
+    if (values.length !== 4 || values[2] <= 0 || values[3] <= 0) {
+      throw new Error("Generated SVG has an invalid viewBox.");
+    }
+    return { width: values[2], height: values[3] };
+  }
+  function parseSvgLength(value) {
+    if (!value) {
+      return null;
+    }
+    const parsed = Number.parseFloat(value);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }
+  function collectValues(fields) {
+    const values = {};
+    fields.forEach((field) => {
+      const element2 = form.elements.namedItem(field.key);
+      if (!element2) {
         return;
       }
-      reject(new Error("Canvas could not encode the generated PNG."));
-    }, "image/png");
-  });
-}
-function loadSvgImage(url) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Generated SVG could not be decoded for PNG export."));
-    image.src = url;
-  });
-}
-function parseSvgDimensions(svg) {
-  const svgDocument = new DOMParser().parseFromString(svg, "image/svg+xml");
-  if (svgDocument.querySelector("parsererror")) {
-    throw new Error("Generated SVG markup is invalid.");
-  }
-  const svgElement = svgDocument.documentElement;
-  const width = parseSvgLength(svgElement.getAttribute("width"));
-  const height = parseSvgLength(svgElement.getAttribute("height"));
-  if (width !== null && height !== null) {
-    return { width, height };
-  }
-  const viewBox = svgElement.getAttribute("viewBox");
-  if (!viewBox) {
-    throw new Error("Generated SVG is missing width and height metadata.");
-  }
-  const values = viewBox.split(/[\s,]+/).map((value) => Number.parseFloat(value)).filter((value) => Number.isFinite(value));
-  if (values.length !== 4 || values[2] <= 0 || values[3] <= 0) {
-    throw new Error("Generated SVG has an invalid viewBox.");
-  }
-  return { width: values[2], height: values[3] };
-}
-function parseSvgLength(value) {
-  if (!value) {
-    return null;
-  }
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
-}
-function collectValues(fields) {
-  const values = {};
-  fields.forEach((field) => {
-    const element = form.elements.namedItem(field.key);
-    if (!element) {
-      return;
-    }
-    if (field.type === "checkbox") {
-      values[field.key] = element.checked;
-      return;
-    }
-    const value = element.value.trim();
-    if (value === "") {
-      return;
-    }
-    if (field.type === "number") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        values[field.key] = parsed;
+      if (field.type === "checkbox") {
+        values[field.key] = element2.checked;
+        return;
       }
-      return;
-    }
-    values[field.key] = value;
-  });
-  return values;
+      const value = element2.value.trim();
+      if (value === "") {
+        return;
+      }
+      if (field.type === "number") {
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) {
+          values[field.key] = parsed;
+        }
+        return;
+      }
+      values[field.key] = value;
+    });
+    return values;
+  }
+  init();
+  const unmount = () => {
+    events.abort();
+    generatorSelect.replaceChildren();
+    fieldsContainer.replaceChildren();
+    mounts.delete(root);
+  };
+  mounts.set(root, unmount);
+  return unmount;
 }
 function buildBackgroundOptions(values) {
   return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
     width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
     height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
     seed: numberValue(values, "seed"),
@@ -2306,6 +2329,7 @@ function buildBackgroundOptions(values) {
 }
 function buildPolygalaxyOptions(values) {
   return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
     width: numberValue(values, "width") ?? 5120,
     height: numberValue(values, "height") ?? 1440,
     seed: numberValue(values, "seed"),
@@ -2325,6 +2349,7 @@ function buildPolygalaxyOptions(values) {
 }
 function buildTerrainOptions(values) {
   return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
     width: numberValue(values, "width") ?? 5120,
     height: numberValue(values, "height") ?? 1440,
     seed: numberValue(values, "seed"),
@@ -2345,6 +2370,7 @@ function buildSkylineOptions(values) {
   const rawDensity = typeof values.windowDensity === "number" ? values.windowDensity : 0.55;
   const windowDensity = Math.max(0, Math.min(1, rawDensity));
   return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
     width: numberValue(values, "width") ?? 5120,
     height: numberValue(values, "height") ?? 1440,
     seed: numberValue(values, "seed"),
@@ -2361,6 +2387,7 @@ function buildSkylineOptions(values) {
 }
 function buildBotanicalOptions(values) {
   return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
     width: numberValue(values, "width") ?? 5120,
     height: numberValue(values, "height") ?? 1440,
     seed: numberValue(values, "seed"),
@@ -2375,5 +2402,8 @@ function buildBotanicalOptions(values) {
     noise: booleanValue(values, "noise")
   };
 }
-init();
+document.querySelectorAll(".background-generator-app").forEach((root) => mount(root));
+export {
+  mount
+};
 //# sourceMappingURL=app.js.map

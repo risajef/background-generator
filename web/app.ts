@@ -229,14 +229,28 @@ const GENERATORS = {
     },
 } satisfies Record<string, GeneratorConfig>;
 
-const form = document.getElementById("generator-form") as HTMLFormElement;
-const generatorSelect = document.getElementById("generator-select") as HTMLSelectElement;
-const fieldsContainer = document.getElementById("dynamic-fields") as HTMLDivElement;
-const preview = document.getElementById("preview") as HTMLDivElement;
-const meta = document.getElementById("meta") as HTMLDivElement;
-const output = document.getElementById("svg-output") as HTMLTextAreaElement;
-const downloadSvgButton = document.getElementById("download-svg") as HTMLButtonElement;
-const downloadPngButton = document.getElementById("download-png") as HTMLButtonElement;
+const mounts = new WeakMap<HTMLElement, () => void>();
+let mountCounter = 0;
+
+/** Mount one independent control/preview instance inside its own root. */
+export function mount(root: HTMLElement): () => void {
+    const existing = mounts.get(root);
+    if (existing) return existing;
+    const events = new AbortController();
+    const instancePrefix = `background-ui-${++mountCounter}`;
+    function element<T extends HTMLElement>(role: string): T {
+        const found = root.querySelector<T>(`[data-role="${role}"]`);
+        if (!found) throw new Error(`Missing background generator element: ${role}`);
+        return found;
+    }
+const form = element<HTMLFormElement>("generator-form");
+const generatorSelect = element<HTMLSelectElement>("generator-select");
+const fieldsContainer = element<HTMLDivElement>("dynamic-fields");
+const preview = element<HTMLDivElement>("preview");
+const meta = element<HTMLDivElement>("meta");
+const output = element<HTMLTextAreaElement>("svg-output");
+const downloadSvgButton = element<HTMLButtonElement>("download-svg");
+const downloadPngButton = element<HTMLButtonElement>("download-png");
 
 let lastGeneratedAsset: GeneratedAsset | null = null;
 
@@ -247,13 +261,13 @@ function init(): void {
         option.textContent = config.label;
         generatorSelect.append(option);
     });
-    generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")));
+    generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")), { signal: events.signal });
     renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
-    form.addEventListener("submit", handleSubmit);
-    downloadSvgButton.addEventListener("click", handleSvgDownload);
+    form.addEventListener("submit", handleSubmit, { signal: events.signal });
+    downloadSvgButton.addEventListener("click", handleSvgDownload, { signal: events.signal });
     downloadPngButton.addEventListener("click", () => {
         void handlePngDownload();
-    });
+    }, { signal: events.signal });
     setDownloadState(false);
 }
 
@@ -262,13 +276,13 @@ function renderFields(generatorKey: GeneratorKey): void {
     fieldsContainer.innerHTML = "";
     config.fields.forEach((field) => {
         const label = document.createElement("label");
-        label.htmlFor = field.key;
+        label.htmlFor = `${instancePrefix}-${field.key}`;
         label.textContent = field.label;
         let input: HTMLInputElement | HTMLSelectElement;
         if (field.type === "select") {
             const select = document.createElement("select");
             select.name = field.key;
-            select.id = field.key;
+            select.id = `${instancePrefix}-${field.key}`;
             field.options?.forEach((opt) => {
                 const option = document.createElement("option");
                 option.value = opt.value;
@@ -283,7 +297,7 @@ function renderFields(generatorKey: GeneratorKey): void {
             const inputEl = document.createElement("input");
             inputEl.type = field.type === "checkbox" ? "checkbox" : field.type;
             inputEl.name = field.key;
-            inputEl.id = field.key;
+            inputEl.id = `${instancePrefix}-${field.key}`;
             if (field.type === "number" && typeof field.defaultValue === "number") {
                 inputEl.value = String(field.defaultValue);
             }
@@ -318,7 +332,7 @@ function handleSubmit(event: SubmitEvent): void {
     const config = GENERATORS[generatorKey];
     const values = collectValues(config.fields);
     try {
-        const result = config.run(values);
+        const result = config.run({ ...values, idPrefix: instancePrefix });
         preview.innerHTML = result.svg;
         meta.textContent = result.meta;
         output.value = result.svg;
@@ -475,8 +489,21 @@ function collectValues(fields: FieldConfig[]): ValueMap {
     return values;
 }
 
+
+init();
+    const unmount = () => {
+        events.abort();
+        generatorSelect.replaceChildren();
+        fieldsContainer.replaceChildren();
+        mounts.delete(root);
+    };
+    mounts.set(root, unmount);
+    return unmount;
+}
+
 function buildBackgroundOptions(values: ValueMap): BackgroundOptions {
     return {
+        idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : undefined,
         width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
         height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
         seed: numberValue(values, "seed"),
@@ -492,6 +519,7 @@ function buildBackgroundOptions(values: ValueMap): BackgroundOptions {
 
 function buildPolygalaxyOptions(values: ValueMap): PolygalaxyOptions {
     return {
+        idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : undefined,
         width: numberValue(values, "width") ?? 5120,
         height: numberValue(values, "height") ?? 1440,
         seed: numberValue(values, "seed"),
@@ -512,6 +540,7 @@ function buildPolygalaxyOptions(values: ValueMap): PolygalaxyOptions {
 
 function buildTerrainOptions(values: ValueMap): TerrainOptions {
     return {
+        idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : undefined,
         width: numberValue(values, "width") ?? 5120,
         height: numberValue(values, "height") ?? 1440,
         seed: numberValue(values, "seed"),
@@ -533,6 +562,7 @@ function buildSkylineOptions(values: ValueMap): SkylineOptions {
     const rawDensity = typeof values.windowDensity === "number" ? values.windowDensity : 0.55;
     const windowDensity = Math.max(0, Math.min(1, rawDensity));
     return {
+        idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : undefined,
         width: numberValue(values, "width") ?? 5120,
         height: numberValue(values, "height") ?? 1440,
         seed: numberValue(values, "seed"),
@@ -550,6 +580,7 @@ function buildSkylineOptions(values: ValueMap): SkylineOptions {
 
 function buildBotanicalOptions(values: ValueMap): BotanicalOptions {
     return {
+        idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : undefined,
         width: numberValue(values, "width") ?? 5120,
         height: numberValue(values, "height") ?? 1440,
         seed: numberValue(values, "seed"),
@@ -565,4 +596,5 @@ function buildBotanicalOptions(values: ValueMap): BotanicalOptions {
     };
 }
 
-init();
+
+document.querySelectorAll<HTMLElement>(".background-generator-app").forEach((root) => mount(root));
