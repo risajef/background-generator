@@ -85,7 +85,7 @@ test('polygalaxy renders exact requested planet counts, including zero',()=>{
 });
 
 test('all generator outputs decode as finite SVGs through Sharp', async () => {
-    const sharp = require('sharp');
+    const { default: sharp } = await import('sharp');
     for (const [name,generate] of generators) {
         const {svg}=generate({seed:42,width:640,height:360});
         const {info}=await sharp(Buffer.from(svg)).png().toBuffer({resolveWithObject:true});

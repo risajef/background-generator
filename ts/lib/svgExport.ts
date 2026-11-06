@@ -1,5 +1,5 @@
 import { dimensions } from "./validation";
-type SharpModule = typeof import("sharp");
+type SharpModule = typeof import("sharp").default;
 
 interface ConvertParams {
     svgPath: string;

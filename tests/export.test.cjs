@@ -30,7 +30,8 @@ test('SVG-only export needs no native module; normal export creates requested PN
         const svg=require('../ts/lib/background').generateBackgroundSvg({width:160,height:90,seed:42}).svg;
         assert.equal((await writeSvgArtifacts({svgPath,svg,width:160,height:90,skipPng:true})).pngPath,null);
         const pngPath=await convertSvgToPng({...params,svgPath,svgContent:svg,scale:2});
-        const metadata=await require('sharp')(pngPath).metadata();
+        const { default: sharp } = await import('sharp');
+        const metadata=await sharp(pngPath).metadata();
         assert.equal(metadata.width,160);assert.equal(metadata.height,90);
     } finally {fs.rmSync(dir,{recursive:true,force:true});}
 });

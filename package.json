@@ -14,7 +14,7 @@
     "check": "npm run check:cli && tsc -p tsconfig.web.json && npm test && npm run check:dist"
   },
   "dependencies": {
-    "sharp": "^0.34.5",
+    "sharp": "^0.35.5",
     "ts-node": "^10.9.2"
   },
   "devDependencies": {
