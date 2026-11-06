@@ -15,4 +15,4 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | 9. Planet count semantics | Complete | Exact totals (including zero), enough orbit capacity, actual rendered counts and separate requestedCounts; tests cover 0/1/3 systems and up to 1,000 planets. |
 | A. PNG dependency failures | Complete | Required PNG export now propagates module/native errors with their cause; validates scale, path and pixel budget. Injected failure tests and real Sharp dimension checks pass. |
 | B. Async browser state and worker isolation | Complete | Immutable export snapshots, revision-checked results/status, independent worker per request with cancellation/timeout, separated config and raster modules. Worker lifecycle tests, typechecks, and browser generate/export race tests pass. |
-| C. CI and artifact consistency | Pending | |
+| C. CI and artifact consistency | Complete | Added Node 22/24/26 CI checks, Node 24 browser checks, all-generator Sharp decoding, and a non-mutating bundle/source-map consistency gate. Local full suite and browser suite pass on Node 26; other Node versions await CI execution. |

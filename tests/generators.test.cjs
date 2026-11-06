@@ -83,3 +83,12 @@ test('polygalaxy renders exact requested planet counts, including zero',()=>{
         assert.equal(result.requestedCounts.planets,planets);
     }
 });
+
+test('all generator outputs decode as finite SVGs through Sharp', async () => {
+    const sharp = require('sharp');
+    for (const [name,generate] of generators) {
+        const {svg}=generate({seed:42,width:640,height:360});
+        const {info}=await sharp(Buffer.from(svg)).png().toBuffer({resolveWithObject:true});
+        assert.equal(info.width,640,name);assert.equal(info.height,360,name);
+    }
+});

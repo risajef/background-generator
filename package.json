@@ -9,7 +9,9 @@
     "generate:botanical": "ts-node --project tsconfig.json ts/generateBotanical.ts",
     "generate:polygalaxy": "ts-node --project tsconfig.json ts/generatePolygalaxy.ts",
     "generate:all": "ts-node --project tsconfig.json ts/generateAll.ts",
-    "test:browser": "node tests/browser.cjs"
+    "test:browser": "node tests/browser.cjs",
+    "check:dist": "node scripts/check-web-dist.cjs",
+    "check": "npm run check:cli && tsc -p tsconfig.web.json && npm test && npm run check:dist"
   },
   "dependencies": {
     "sharp": "^0.34.5",

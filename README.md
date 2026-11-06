@@ -115,3 +115,11 @@ All six CLI commands support `--no-png`. PNG scale must be between 1 and 4; use 
 Serve `web/` over HTTP after `npm run build:web`; include both `dist/app.js` and `dist/generator-worker.js` when embedding. Generation runs in a dedicated worker. Generate replaces any pending request, Cancel terminates it, and requests time out after ten seconds. Validation errors appear beside the preview. PNG export captures the scene at click time, so generating another scene does not change a pending download's contents or filename.
 
 `mount(root)` is exported from the browser bundle; it returns an unmount function that removes listeners and cancels pending generation. Each `.background-generator-app` root is also mounted automatically.
+
+### Verification
+
+- `npm run check` checks CLI and browser types, generator/export/worker/CLI regressions, and exact browser bundle/source-map consistency without rewriting artifacts.
+- `npm run test:browser` serves a local fixture and checks all five SVG/PNG exports, host CSS isolation, two independent mounts, export races, cancellation, replacement, and remounting. Run `npx puppeteer browsers install chrome` first if Chrome is not installed for Puppeteer. An existing Chrome can be selected with `PUPPETEER_EXECUTABLE_PATH`.
+- CI runs the main checks on Node 22, 24 and 26, and the browser suite on Node 24. It does not deploy or push changes.
+
+After editing browser source, regenerate and commit all four files in `web/dist/` using `npm run build:web`. The consistency gate also rejects unexpected JavaScript artifacts left by renamed entry points.
