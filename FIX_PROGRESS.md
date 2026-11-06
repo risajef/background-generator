@@ -1,0 +1,18 @@
+# Background generator fix progress
+
+Scope: background-generator subrepository only. No parent website changes, parent commits, deployment, or pushes. Each completed row belongs to its own fix commit; inspect `git log` for commit IDs.
+
+| Review item | Status | Change and verification |
+| --- | --- | --- |
+| 1. Input validation and resource limits | Complete | Core validation of dimensions, pixels, counts, seeds, booleans, ranges and aggregate complexity; regression tests and browser build pass. Browser worker isolation will follow with UI orchestration. |
+| 2. Skyline building range | Pending | |
+| 3. SVG ID collisions | Pending | |
+| 4. CLI execution configuration | Pending | |
+| 5. Malformed CLI arguments | Pending | |
+| 6. SVG-only export flags | Pending | |
+| 7. Catalog and registry types | Pending | |
+| 8. Embedded UI isolation | Pending | |
+| 9. Planet count semantics | Pending | |
+| A. PNG dependency failures | Pending | |
+| B. Async browser state and worker isolation | Pending | |
+| C. CI and artifact consistency | Pending | |

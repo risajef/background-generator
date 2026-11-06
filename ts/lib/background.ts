@@ -1,3 +1,4 @@
+import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 const CURATED_PALETTES: Array<[string, string, string]> = [
@@ -71,6 +72,7 @@ const DEFAULT_BACKGROUND_OPTIONS: ResolvedBackgroundOptions = {
 };
 
 export function generateBackgroundSvg(partial: BackgroundOptions = {}): BackgroundResult {
+    validateOptions(partial, { blobCount: [0, 100, 20], ribbonCount: [0, 100, 20], orbCount: [0, 1000], lightCount: [0, 100, 10], lineCount: [0, 100, 20], triangleCount: [0, 200, 5], waveCount: [0, 100, 20] }, []);
     const seed = typeof partial.seed === "number" && !Number.isNaN(partial.seed) ? partial.seed : Date.now();
     const resolved: ResolvedBackgroundOptions = {
         ...DEFAULT_BACKGROUND_OPTIONS,

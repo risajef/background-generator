@@ -1,3 +1,4 @@
+import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface SkylineTheme {
@@ -129,6 +130,7 @@ interface LayerPlan {
 }
 
 export function generateSkylineSvg(options: SkylineOptions = {}): SkylineResult {
+    validateOptions(options, { layers: [1, 5] }, ["stars", "haze", "rooftopDetails", "water", "traffic"]);
     const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
     const width = options.width ?? 5120;
     const height = options.height ?? 1440;

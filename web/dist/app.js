@@ -1,3 +1,45 @@
+// ts/lib/validation.ts
+var LIMITS = { dimension: 8192, pixels: 16777216, complexity: 12e3 };
+function integer(name, value, min, max) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < min || value > max) {
+    throw new RangeError(`${name} must be an integer between ${min} and ${max}`);
+  }
+}
+function dimensions(width, height) {
+  integer("width", width, 1, LIMITS.dimension);
+  integer("height", height, 1, LIMITS.dimension);
+  if (width * height > LIMITS.pixels) throw new RangeError(`Canvas exceeds ${LIMITS.pixels} pixels`);
+}
+function validateOptions(options, counts, booleans = []) {
+  const values = options;
+  dimensions(values.width ?? 5120, values.height ?? 1440);
+  if (values.seed !== void 0) integer("seed", values.seed, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
+  let complexity = 0;
+  for (const [key, [min, max, weight = 1]] of Object.entries(counts)) {
+    const value = values[key];
+    if (value === void 0 || value === null) continue;
+    integer(key, value, min, max);
+    complexity += value * weight;
+  }
+  if (complexity > LIMITS.complexity) throw new RangeError("Scene complexity exceeds the generation budget");
+  for (const key of booleans) {
+    if (values[key] !== void 0 && typeof values[key] !== "boolean") throw new TypeError(`${key} must be boolean`);
+  }
+  if (values.windowDensity !== void 0) {
+    const density = values.windowDensity;
+    if (typeof density !== "number" || !Number.isFinite(density) || density < 0 || density > 1) {
+      throw new RangeError("windowDensity must be between 0 and 1");
+    }
+  }
+  if (values.buildingsPerLayer !== void 0) {
+    const range = values.buildingsPerLayer;
+    if (!Array.isArray(range) || range.length !== 2) throw new TypeError("buildingsPerLayer must be a pair");
+    integer("buildings minimum", range[0], 1, 100);
+    integer("buildings maximum", range[1], 1, 100);
+    if (range[0] > range[1]) throw new RangeError("Building range must be ordered");
+  }
+}
+
 // ts/lib/rng.ts
 var RNG = class {
   state;
@@ -52,6 +94,7 @@ var DEFAULT_BACKGROUND_OPTIONS = {
   seed: Date.now()
 };
 function generateBackgroundSvg(partial = {}) {
+  validateOptions(partial, { blobCount: [0, 100, 20], ribbonCount: [0, 100, 20], orbCount: [0, 1e3], lightCount: [0, 100, 10], lineCount: [0, 100, 20], triangleCount: [0, 200, 5], waveCount: [0, 100, 20] }, []);
   const seed = typeof partial.seed === "number" && !Number.isNaN(partial.seed) ? partial.seed : Date.now();
   const resolved = {
     ...DEFAULT_BACKGROUND_OPTIONS,
@@ -495,6 +538,7 @@ var SvgBuilder = class {
   }
 };
 function generatePolygalaxySvg(options = {}) {
+  validateOptions(options, { stars: [0, 3e3], facets: [0, 100, 20], rings: [0, 200, 5], threads: [0, 100, 10], glows: [0, 100, 10], constellations: [0, 100, 10], systems: [0, 30, 100], arms: [0, 30, 100], planets: [0, 1e3, 3] }, ["scanlines"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
   const rng = new RNG(seed);
   const width = options.width ?? 5120;
@@ -904,6 +948,7 @@ var SceneBuilder = class {
   }
 };
 function generateTerrainSvg(options = {}) {
+  validateOptions(options, { mountains: [1, 20, 50], trees: [0, 2e3, 2], clouds: [0, 300, 2] }, ["fog", "noise", "moon"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
   const rng = new RNG(seed);
   const width = options.width ?? 5120;
@@ -1129,6 +1174,7 @@ var CityBuilder = class {
   }
 };
 function generateSkylineSvg(options = {}) {
+  validateOptions(options, { layers: [1, 5] }, ["stars", "haze", "rooftopDetails", "water", "traffic"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
   const width = options.width ?? 5120;
   const height = options.height ?? 1440;
@@ -1585,6 +1631,7 @@ var GardenBuilder = class {
   }
 };
 function generateBotanicalSvg(options = {}) {
+  validateOptions(options, { leaves: [0, 500, 5], fronds: [0, 200, 20], vines: [0, 100, 10], blooms: [0, 300, 10], dewDrops: [0, 2e3], groundLayers: [2, 6] }, ["veil", "noise"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
   const rng = new RNG(seed);
   const width = options.width ?? 5120;

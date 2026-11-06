@@ -1,3 +1,4 @@
+import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface BotanicalTheme {
@@ -153,6 +154,7 @@ class GardenBuilder {
 }
 
 export function generateBotanicalSvg(options: BotanicalOptions = {}): BotanicalResult {
+    validateOptions(options, { leaves: [0, 500, 5], fronds: [0, 200, 20], vines: [0, 100, 10], blooms: [0, 300, 10], dewDrops: [0, 2000], groundLayers: [2, 6] }, ["veil", "noise"]);
     const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
     const rng = new RNG(seed);
     const width = options.width ?? 5120;

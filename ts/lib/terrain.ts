@@ -1,3 +1,4 @@
+import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface BiomeTheme {
@@ -121,6 +122,7 @@ class SceneBuilder {
 }
 
 export function generateTerrainSvg(options: TerrainOptions = {}): TerrainResult {
+    validateOptions(options, { mountains: [1, 20, 50], trees: [0, 2000, 2], clouds: [0, 300, 2] }, ["fog", "noise", "moon"]);
     const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
     const rng = new RNG(seed);
     const width = options.width ?? 5120;

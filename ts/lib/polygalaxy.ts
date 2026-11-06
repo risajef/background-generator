@@ -1,3 +1,4 @@
+import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface Theme {
@@ -166,6 +167,7 @@ class SvgBuilder {
 }
 
 export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): PolygalaxyResult {
+    validateOptions(options, { stars: [0, 3000], facets: [0, 100, 20], rings: [0, 200, 5], threads: [0, 100, 10], glows: [0, 100, 10], constellations: [0, 100, 10], systems: [0, 30, 100], arms: [0, 30, 100], planets: [0, 1000, 3] }, ["scanlines"]);
     const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
     const rng = new RNG(seed);
     const width = options.width ?? 5120;

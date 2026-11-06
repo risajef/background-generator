@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "build:web": "tsc -p tsconfig.web.json && esbuild web/app.ts --bundle --format=esm --platform=browser --outfile=web/dist/app.js --sourcemap"
+    "build:web": "tsc -p tsconfig.web.json && esbuild web/app.ts --bundle --format=esm --platform=browser --outfile=web/dist/app.js --sourcemap",
+    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' node -r ts-node/register --test tests/*.test.cjs"
   },
   "dependencies": {
     "sharp": "^0.34.5",
