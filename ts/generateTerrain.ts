@@ -1,10 +1,9 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
-import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { generateTerrainSvg, TerrainOptions, TERRAIN_THEMES } from "./lib/terrain";
-import { convertSvgToPng } from "./lib/svgExport";
+import { writeSvgArtifacts } from "./cli/artifacts";
 
 type ThemeKey = keyof typeof TERRAIN_THEMES;
 
@@ -22,6 +21,7 @@ interface CliArgs {
     noise: boolean;
     moon: boolean;
     pngScale: number;
+    skipPng: boolean;
     listThemes: boolean;
 }
 
@@ -41,6 +41,7 @@ function parseArgs(): CliArgs {
         noise: false,
         moon: false,
         pngScale: 1,
+        skipPng: false,
         listThemes: false,
     };
 
@@ -95,6 +96,9 @@ function parseArgs(): CliArgs {
             case "--moon":
                 defaults.moon = true;
                 break;
+            case "--no-png":
+                defaults.skipPng = true;
+                break;
             case "--png-scale":
                 defaults.pngScale = parseDecimal(next(), arg);
                 break;
@@ -146,18 +150,12 @@ async function main(): Promise<void> {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "");
         const slug = result.theme.name.toLowerCase().replace(/\s+/g, "-");
         const svgPath = path.join(args.output, `terrain_${slug}_${timestamp}_${idx + 1}.svg`);
-        await fsp.writeFile(svgPath, result.svg, "utf8");
-        let message = `Generated ${svgPath}`;
-        const pngPath = await convertSvgToPng({
-            svgPath,
-            svgContent: result.svg,
-            width: args.width,
-            height: args.height,
-            scale: args.pngScale,
+        const { pngPath } = await writeSvgArtifacts({
+            svgPath, svg: result.svg, width: args.width, height: args.height,
+            skipPng: args.skipPng, pngScale: args.pngScale,
         });
-        if (pngPath) {
-            message += ` and ${pngPath}`;
-        }
+        let message = `Generated ${svgPath}`;
+        if (pngPath) message += ` and ${pngPath}`;
         message += ` (${result.theme.name})`;
         console.log(message);
     }

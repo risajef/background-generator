@@ -1,10 +1,9 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
-import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { generateBackgroundSvg, BackgroundOptions } from "./lib/background";
-import { convertSvgToPng } from "./lib/svgExport";
+import { writeSvgArtifacts } from "./cli/artifacts";
 
 interface CliArgs {
     output: string;
@@ -20,6 +19,7 @@ interface CliArgs {
     triangleCount: number | null;
     waveCount: number | null;
     pngScale: number;
+    skipPng: boolean;
 }
 
 function parseArgs(): CliArgs {
@@ -38,6 +38,7 @@ function parseArgs(): CliArgs {
         triangleCount: null,
         waveCount: null,
         pngScale: 1,
+        skipPng: false,
     };
 
     for (let i = 0; i < argv.length; i += 1) {
@@ -85,6 +86,9 @@ function parseArgs(): CliArgs {
             case "--wave-count":
                 defaults.waveCount = parseInteger(next(), arg);
                 break;
+            case "--no-png":
+                defaults.skipPng = true;
+                break;
             case "--png-scale":
                 defaults.pngScale = parseDecimal(next(), arg);
                 break;
@@ -122,18 +126,12 @@ async function main(): Promise<void> {
         const { svg, palette } = generateBackgroundSvg(buildGeneratorOptions(args, iterationSeed));
         const timestamp = new Date().toISOString().replace(/[:.]/g, "");
         const svgPath = path.join(args.output, `background_${timestamp}_${idx + 1}.svg`);
-        await fsp.writeFile(svgPath, svg, "utf8");
-        let message = `Generated ${svgPath}`;
-        const pngPath = await convertSvgToPng({
-            svgPath,
-            svgContent: svg,
-            width: args.width,
-            height: args.height,
-            scale: args.pngScale,
+        const { pngPath } = await writeSvgArtifacts({
+            svgPath, svg: svg, width: args.width, height: args.height,
+            skipPng: args.skipPng, pngScale: args.pngScale,
         });
-        if (pngPath) {
-            message += ` and ${pngPath}`;
-        }
+        let message = `Generated ${svgPath}`;
+        if (pngPath) message += ` and ${pngPath}`;
         message += ` (palette: ${palette.gradient.join(", ")})`;
         console.log(message);
     }

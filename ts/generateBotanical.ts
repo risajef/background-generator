@@ -1,10 +1,9 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
-import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { generateBotanicalSvg, BotanicalOptions, BOTANICAL_THEMES } from "./lib/botanical";
-import { convertSvgToPng } from "./lib/svgExport";
+import { writeSvgArtifacts } from "./cli/artifacts";
 
 type ThemeKey = keyof typeof BOTANICAL_THEMES;
 
@@ -24,6 +23,7 @@ interface CliArgs {
     veil: boolean | null;
     noise: boolean;
     pngScale: number;
+    skipPng: boolean;
     listThemes: boolean;
 }
 
@@ -45,6 +45,7 @@ function parseArgs(): CliArgs {
         veil: null,
         noise: false,
         pngScale: 1,
+        skipPng: false,
         listThemes: false,
     };
 
@@ -112,7 +113,7 @@ function parseArgs(): CliArgs {
                 defaults.pngScale = parseDecimal(next(), arg);
                 break;
             case "--no-png":
-                defaults.pngScale = 0;
+                defaults.skipPng = true;
                 break;
             case "--list-themes":
                 defaults.listThemes = true;
@@ -165,20 +166,12 @@ async function main(): Promise<void> {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "");
         const slug = result.theme.name.toLowerCase().replace(/\s+/g, "-");
         const svgPath = path.join(args.output, `botanical_${slug}_${timestamp}_${idx + 1}.svg`);
-        await fsp.writeFile(svgPath, result.svg, "utf8");
+        const { pngPath } = await writeSvgArtifacts({
+            svgPath, svg: result.svg, width: args.width, height: args.height,
+            skipPng: args.skipPng, pngScale: args.pngScale,
+        });
         let message = `Generated ${svgPath}`;
-        if (args.pngScale > 0) {
-            const pngPath = await convertSvgToPng({
-                svgPath,
-                svgContent: result.svg,
-                width: args.width,
-                height: args.height,
-                scale: args.pngScale,
-            });
-            if (pngPath) {
-                message += ` and ${pngPath}`;
-            }
-        }
+        if (pngPath) message += ` and ${pngPath}`;
         message += ` (${result.theme.name})`;
         console.log(message);
     }

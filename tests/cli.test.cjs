@@ -32,3 +32,22 @@ test('shared decimal parser rejects partial numbers',()=>{
     for(const value of ['0.5oops','Infinity','NaN','']) assert.throws(()=>parseDecimal(value,'--window-density'));
     assert.equal(parseDecimal('0.55','--window-density'),0.55);
 });
+
+test('all CLIs honor --no-png and write only finite SVGs',()=>{
+    const fs = require('node:fs');
+    const os = require('node:os');
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(),'background-cli-'));
+    try {
+        for(const name of ['Background','Terrain','Skyline','Botanical','Polygalaxy','All']) {
+            const out = path.join(dir,name);
+            const result=cli(name,['--count','1','--width','160','--height','90','--seed','42','--no-png','--output',out]);
+            assert.equal(result.status,0,result.stderr);
+            const files=fs.readdirSync(out);
+            assert.equal(files.length,name==='All'?5:1);
+            for(const file of files) {
+                assert.ok(file.endsWith('.svg'));
+                assert.doesNotMatch(fs.readFileSync(path.join(out,file),'utf8'),/NaN|Infinity/);
+            }
+        }
+    } finally {fs.rmSync(dir,{recursive:true,force:true});}
+});

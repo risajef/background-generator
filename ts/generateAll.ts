@@ -1,14 +1,13 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
-import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { generateBackgroundSvg } from "./lib/background";
 import { generateBotanicalSvg } from "./lib/botanical";
 import { generatePolygalaxySvg } from "./lib/polygalaxy";
 import { generateTerrainSvg } from "./lib/terrain";
 import { generateSkylineSvg } from "./lib/skyline";
-import { convertSvgToPng } from "./lib/svgExport";
+import { writeSvgArtifacts } from "./cli/artifacts";
 
 interface CliArgs {
     output: string;
@@ -99,18 +98,7 @@ async function writeArtifacts(
     const ordinal = String(index + 1).padStart(2, "0");
     const baseName = `${jobKey}_${slug}_${timestamp}_${ordinal}`;
     const svgPath = path.join(args.output, `${baseName}.svg`);
-    await fsp.writeFile(svgPath, svg, "utf8");
-    let pngPath: string | null = null;
-    if (!args.skipPng) {
-        pngPath = await convertSvgToPng({
-            svgPath,
-            svgContent: svg,
-            width,
-            height,
-            scale: 1,
-        });
-    }
-    return { svgPath, pngPath };
+    return writeSvgArtifacts({ svgPath, svg, width, height, skipPng: args.skipPng });
 }
 
 async function main(): Promise<void> {

@@ -9,7 +9,7 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | 3. SVG ID collisions | Complete | Shared SVG builder, deterministic ID counters independent of art RNG, validated instance prefixes; uniqueness and reference-resolution tests and browser build pass. |
 | 4. CLI execution configuration | Complete | Explicit CommonJS tsconfig, six npm generator scripts, supported Node range; CLI typecheck and documented-invocation tests pass. CI matrix follows in item C. |
 | 5. Malformed CLI arguments | Complete | Shared strict numeric/value parsing, bounded batch/export settings, nonzero errors for unknown or missing arguments; regression tests cover all six CLIs. |
-| 6. SVG-only export flags | Pending | |
+| 6. SVG-only export flags | Complete | All six CLIs use shared artifact writing and explicit skipPng; scale is separate. SVG-only filesystem regressions and CLI typecheck pass. |
 | 7. Catalog and registry types | Pending | |
 | 8. Embedded UI isolation | Pending | |
 | 9. Planet count semantics | Pending | |

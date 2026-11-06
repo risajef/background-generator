@@ -24,8 +24,8 @@ export function validateCommonArgs(args: {width: number; height: number; count: 
     dimensions(args.width, args.height);
     integer("count", args.count, 1, 100);
     if (args.seed !== null) integer("seed", args.seed, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
-    if (args.pngScale !== undefined && (!Number.isFinite(args.pngScale) || args.pngScale < 0 || args.pngScale > 4)) {
-        throw new RangeError("png-scale must be between 0 and 4");
+    if (args.pngScale !== undefined && (!Number.isFinite(args.pngScale) || args.pngScale < 1 || args.pngScale > 4)) {
+        throw new RangeError("png-scale must be between 1 and 4");
     }
     if (args.width * args.height * Math.max(1, args.pngScale ?? 1) ** 2 > 67_108_864) {
         throw new RangeError("PNG rasterization exceeds the pixel budget");

@@ -105,3 +105,5 @@ Feel free to mix and match pieces—every generator exposes a `generate*Svg` fun
 ### Inline SVG identifiers
 
 When composing multiple SVGs into one document, pass a unique `idPrefix` (for example `scene1`, `scene2`) to each generator call. The default prefix is the generator name. IDs use a scene-local counter independent of the art RNG; repeated options and prefix produce identical SVG.
+
+All six CLI commands support `--no-png`. PNG scale must be between 1 and 4; use `--no-png` to disable raster export rather than setting scale to zero. Batch count is bounded to 1–100; canvas dimensions are positive integers up to 8192, with a combined limit of 16,777,216 pixels. Count overrides also have per-generator and aggregate complexity limits; invalid settings exit with an error.

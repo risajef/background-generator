@@ -1,10 +1,9 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
-import { promises as fsp } from "node:fs";
 import path from "node:path";
 import { generatePolygalaxySvg, PolygalaxyOptions, POLYGALAXY_THEMES, POLYGALAXY_STYLES } from "./lib/polygalaxy";
-import { convertSvgToPng } from "./lib/svgExport";
+import { writeSvgArtifacts } from "./cli/artifacts";
 
 type ThemeKey = keyof typeof POLYGALAXY_THEMES;
 type StyleKey = keyof typeof POLYGALAXY_STYLES;
@@ -27,6 +26,7 @@ interface CliArgs {
     arms: number | null;
     planets: number | null;
     pngScale: number;
+    skipPng: boolean;
     scanlines: boolean;
     listThemes: boolean;
     listStyles: boolean;
@@ -52,6 +52,7 @@ function parseArgs(): CliArgs {
         arms: null,
         planets: null,
         pngScale: 1,
+        skipPng: false,
         scanlines: false,
         listThemes: false,
         listStyles: false,
@@ -126,6 +127,9 @@ function parseArgs(): CliArgs {
             case "--planets":
                 defaults.planets = parseInteger(next(), arg);
                 break;
+            case "--no-png":
+                defaults.skipPng = true;
+                break;
             case "--png-scale":
                 defaults.pngScale = parseDecimal(next(), arg);
                 break;
@@ -194,18 +198,12 @@ async function main(): Promise<void> {
         const timestamp = new Date().toISOString().replace(/[:.]/g, "");
         const slug = result.theme.name.toLowerCase().replace(/\s+/g, "-");
         const svgPath = path.join(args.output, `polygalaxy_${slug}_${timestamp}_${idx + 1}.svg`);
-        await fsp.writeFile(svgPath, result.svg, "utf8");
-        let message = `Generated ${svgPath}`;
-        const pngPath = await convertSvgToPng({
-            svgPath,
-            svgContent: result.svg,
-            width: args.width,
-            height: args.height,
-            scale: args.pngScale,
+        const { pngPath } = await writeSvgArtifacts({
+            svgPath, svg: result.svg, width: args.width, height: args.height,
+            skipPng: args.skipPng, pngScale: args.pngScale,
         });
-        if (pngPath) {
-            message += ` and ${pngPath}`;
-        }
+        let message = `Generated ${svgPath}`;
+        if (pngPath) message += ` and ${pngPath}`;
         message += ` (${result.theme.name})`;
         console.log(message);
     }
