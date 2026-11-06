@@ -5,7 +5,7 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | Review item | Status | Change and verification |
 | --- | --- | --- |
 | 1. Input validation and resource limits | Complete | Core validation of dimensions, pixels, counts, seeds, booleans, ranges and aggregate complexity; regression tests and browser build pass. Browser worker isolation will follow with UI orchestration. |
-| 2. Skyline building range | Pending | |
+| 2. Skyline building range | Complete | Each layer samples an exact count in the requested range; fixed and sampled range regression tests and browser build pass. |
 | 3. SVG ID collisions | Pending | |
 | 4. CLI execution configuration | Pending | |
 | 5. Malformed CLI arguments | Pending | |

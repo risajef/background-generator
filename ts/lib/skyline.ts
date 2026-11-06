@@ -122,7 +122,7 @@ class CityBuilder {
 interface LayerPlan {
     baseRatio: number;
     heightRange: [number, number];
-    widthRange: [number, number];
+    buildingCount: number;
     color: string;
     depth: number;
     windowDensity: number;
@@ -369,10 +369,7 @@ function resolveLayerPlans(
             Math.max(0.12, 0.28 - depth * 0.06),
             Math.max(0.18, 0.38 - depth * 0.05),
         ];
-        const widthRange: [number, number] = [
-            0.03 + depth * 0.01,
-            0.09 + depth * 0.04,
-        ];
+        const buildingCount = rng.int(buildingRange[0], buildingRange[1]);
         const paletteIndex = Math.min(theme.buildingBases.length - 1, i % theme.buildingBases.length);
         const color = theme.buildingBases[paletteIndex];
         const rooftopDetails = (options.rooftopDetails ?? true) && depth > 0.35;
@@ -380,22 +377,11 @@ function resolveLayerPlans(
         plans.push({
             baseRatio,
             heightRange,
-            widthRange,
+            buildingCount,
             color,
             depth,
             windowDensity: windowDensity * densityDecay,
             rooftopDetails,
-        });
-    }
-    if (plans.length === 0) {
-        plans.push({
-            baseRatio: 0.72,
-            heightRange: [0.25, 0.32],
-            widthRange: [0.04, 0.08],
-            color: theme.buildingBases[0],
-            depth: 0,
-            windowDensity,
-            rooftopDetails: options.rooftopDetails ?? true,
         });
     }
     return plans;
@@ -408,12 +394,12 @@ function addBuildingLayer(
     rng: RNG,
 ): number {
     const baseY = builder.height * plan.baseRatio;
-    const minWidth = builder.width * plan.widthRange[0];
-    const maxWidth = builder.width * plan.widthRange[1];
-    let x = -builder.width * 0.12;
+    // Each layer samples an exact count and distributes that many towers across the canvas.
+    const slotWidth = builder.width * 1.24 / plan.buildingCount;
     let count = 0;
-    while (x < builder.width * 1.12) {
-        const width = clamp(rng.float(minWidth, maxWidth), minWidth, maxWidth);
+    for (let index = 0; index < plan.buildingCount; index += 1) {
+        const x = -builder.width * 0.12 + index * slotWidth;
+        const width = slotWidth * rng.float(1.02, 1.35);
         const height = builder.height * rng.float(plan.heightRange[0], plan.heightRange[1]);
         const topY = baseY - height;
         const path = buildBuildingPath(x, width, baseY, topY, rng, plan.rooftopDetails);
@@ -437,7 +423,6 @@ function addBuildingLayer(
                 `</g>`,
             );
         }
-        x += width * rng.float(0.65, 1.15);
         count += 1;
     }
     return count;

@@ -30,3 +30,17 @@ test('counts, ranges and aggregate complexity are bounded', () => {
     assert.throws(() => city({windowDensity: NaN}));
     assert.throws(() => require('../ts/lib/polygalaxy').generatePolygalaxySvg({stars:3000, facets:100, systems:30, arms:30, planets:1000}));
 });
+
+test('skyline honors exact and sampled per-layer building ranges', () => {
+    const city = require('../ts/lib/skyline').generateSkylineSvg;
+    const options = {seed:42, width:640, height:360, layers:3};
+    const one = city({...options, buildingsPerLayer:[1,1]});
+    const many = city({...options, buildingsPerLayer:[100,100]});
+    assert.equal(one.buildingCount,3);
+    assert.equal(many.buildingCount,300);
+    assert.notEqual(one.svg,many.svg);
+    for (let seed=0;seed<10;seed++) {
+        const result = city({...options, seed, buildingsPerLayer:[5,8]});
+        assert.ok(result.buildingCount >= 15 && result.buildingCount <= 24);
+    }
+});
