@@ -1,7 +1,14 @@
 {
   "scripts": {
     "build:web": "tsc -p tsconfig.web.json && esbuild web/app.ts --bundle --format=esm --platform=browser --outfile=web/dist/app.js --sourcemap",
-    "test": "TS_NODE_COMPILER_OPTIONS='{\"module\":\"CommonJS\"}' node -r ts-node/register --test tests/*.test.cjs"
+    "test": "node -r ts-node/register --test tests/*.test.cjs",
+    "check:cli": "tsc -p tsconfig.json",
+    "generate:background": "ts-node --project tsconfig.json ts/generateBackground.ts",
+    "generate:terrain": "ts-node --project tsconfig.json ts/generateTerrain.ts",
+    "generate:skyline": "ts-node --project tsconfig.json ts/generateSkyline.ts",
+    "generate:botanical": "ts-node --project tsconfig.json ts/generateBotanical.ts",
+    "generate:polygalaxy": "ts-node --project tsconfig.json ts/generatePolygalaxy.ts",
+    "generate:all": "ts-node --project tsconfig.json ts/generateAll.ts"
   },
   "dependencies": {
     "sharp": "^0.34.5",
@@ -10,5 +17,8 @@
   "devDependencies": {
     "esbuild": "^0.28.1",
     "typescript": "^5.4.3"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
