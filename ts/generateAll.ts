@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+import { argumentValue, parseInteger, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
@@ -43,7 +44,7 @@ function parseArgs(): CliArgs {
         const arg = argv[i];
         const next = () => {
             i += 1;
-            return argv[i];
+            return argumentValue(argv, i, arg);
         };
         switch (arg) {
             case "-o":
@@ -52,29 +53,27 @@ function parseArgs(): CliArgs {
                 break;
             case "-n":
             case "--count":
-                defaults.count = parseInt(next() ?? `${defaults.count}`, 10);
+                defaults.count = parseInteger(next(), arg);
                 break;
             case "--width":
-                defaults.width = parseInt(next() ?? `${defaults.width}`, 10);
+                defaults.width = parseInteger(next(), arg);
                 break;
             case "--height":
-                defaults.height = parseInt(next() ?? `${defaults.height}`, 10);
+                defaults.height = parseInteger(next(), arg);
                 break;
             case "--seed":
-                defaults.seed = parseInt(next() ?? "0", 10);
+                defaults.seed = parseInteger(next(), arg);
                 break;
             case "--no-png":
                 defaults.skipPng = true;
                 break;
             default:
-                console.warn(`Unknown argument: ${arg}`);
+                throw new Error(`Unknown argument: ${arg}`);
         }
     }
 
-    defaults.count = Math.max(1, defaults.count);
-    defaults.width = Math.max(64, defaults.width);
-    defaults.height = Math.max(64, defaults.height);
 
+    validateCommonArgs(defaults);
     return defaults;
 }
 

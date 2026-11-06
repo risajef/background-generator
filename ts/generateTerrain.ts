@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
@@ -47,7 +48,7 @@ function parseArgs(): CliArgs {
         const arg = argv[i];
         const next = () => {
             i += 1;
-            return argv[i];
+            return argumentValue(argv, i, arg);
         };
         switch (arg) {
             case "-o":
@@ -56,32 +57,34 @@ function parseArgs(): CliArgs {
                 break;
             case "-n":
             case "--count":
-                defaults.count = parseInt(next() ?? `${defaults.count}`, 10);
+                defaults.count = parseInteger(next(), arg);
                 break;
             case "--width":
-                defaults.width = parseInt(next() ?? `${defaults.width}`, 10);
+                defaults.width = parseInteger(next(), arg);
                 break;
             case "--height":
-                defaults.height = parseInt(next() ?? `${defaults.height}`, 10);
+                defaults.height = parseInteger(next(), arg);
                 break;
             case "--theme": {
                 const value = next();
                 if (value && (value in TERRAIN_THEMES || value === "random")) {
                     defaults.theme = value as ThemeKey | "random";
+                } else {
+                    throw new Error(`Invalid value for ${arg}: ${value}`);
                 }
                 break;
             }
             case "--seed":
-                defaults.seed = parseInt(next() ?? "0", 10);
+                defaults.seed = parseInteger(next(), arg);
                 break;
             case "--mountains":
-                defaults.mountains = parseInt(next() ?? `${defaults.mountains}`, 10);
+                defaults.mountains = parseInteger(next(), arg);
                 break;
             case "--trees":
-                defaults.trees = parseInt(next() ?? `${defaults.trees}`, 10);
+                defaults.trees = parseInteger(next(), arg);
                 break;
             case "--clouds":
-                defaults.clouds = parseInt(next() ?? `${defaults.clouds}`, 10);
+                defaults.clouds = parseInteger(next(), arg);
                 break;
             case "--fog":
                 defaults.fog = true;
@@ -93,16 +96,17 @@ function parseArgs(): CliArgs {
                 defaults.moon = true;
                 break;
             case "--png-scale":
-                defaults.pngScale = parseFloat(next() ?? "1");
+                defaults.pngScale = parseDecimal(next(), arg);
                 break;
             case "--list-themes":
                 defaults.listThemes = true;
                 break;
             default:
-                console.warn(`Unknown argument: ${arg}`);
+                throw new Error(`Unknown argument: ${arg}`);
         }
     }
 
+    validateCommonArgs(defaults);
     return defaults;
 }
 

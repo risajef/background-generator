@@ -1,4 +1,5 @@
 #!/usr/bin/env ts-node
+import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
 import fs from "node:fs";
 import { promises as fsp } from "node:fs";
 import path from "node:path";
@@ -60,7 +61,7 @@ function parseArgs(): CliArgs {
         const arg = argv[i];
         const next = () => {
             i += 1;
-            return argv[i];
+            return argumentValue(argv, i, arg);
         };
         switch (arg) {
             case "-o":
@@ -69,21 +70,23 @@ function parseArgs(): CliArgs {
                 break;
             case "-n":
             case "--count":
-                defaults.count = parseInt(next() ?? `${defaults.count}`, 10);
+                defaults.count = parseInteger(next(), arg);
                 break;
             case "--width":
-                defaults.width = parseInt(next() ?? `${defaults.width}`, 10);
+                defaults.width = parseInteger(next(), arg);
                 break;
             case "--height":
-                defaults.height = parseInt(next() ?? `${defaults.height}`, 10);
+                defaults.height = parseInteger(next(), arg);
                 break;
             case "--seed":
-                defaults.seed = parseInt(next() ?? "0", 10);
+                defaults.seed = parseInteger(next(), arg);
                 break;
             case "--theme": {
                 const value = next();
                 if (value && (value in POLYGALAXY_THEMES || value === "random")) {
                     defaults.theme = value as ThemeKey | "random";
+                } else {
+                    throw new Error(`Invalid value for ${arg}: ${value}`);
                 }
                 break;
             }
@@ -91,38 +94,40 @@ function parseArgs(): CliArgs {
                 const value = next();
                 if (value && value in POLYGALAXY_STYLES) {
                     defaults.style = value as StyleKey;
+                } else {
+                    throw new Error(`Invalid value for ${arg}: ${value}`);
                 }
                 break;
             }
             case "--stars":
-                defaults.stars = parseInt(next() ?? "0", 10);
+                defaults.stars = parseInteger(next(), arg);
                 break;
             case "--facets":
-                defaults.facets = parseInt(next() ?? "0", 10);
+                defaults.facets = parseInteger(next(), arg);
                 break;
             case "--rings":
-                defaults.rings = parseInt(next() ?? "0", 10);
+                defaults.rings = parseInteger(next(), arg);
                 break;
             case "--threads":
-                defaults.threads = parseInt(next() ?? "0", 10);
+                defaults.threads = parseInteger(next(), arg);
                 break;
             case "--glows":
-                defaults.glows = parseInt(next() ?? "0", 10);
+                defaults.glows = parseInteger(next(), arg);
                 break;
             case "--constellations":
-                defaults.constellations = parseInt(next() ?? "0", 10);
+                defaults.constellations = parseInteger(next(), arg);
                 break;
             case "--systems":
-                defaults.systems = parseInt(next() ?? "0", 10);
+                defaults.systems = parseInteger(next(), arg);
                 break;
             case "--arms":
-                defaults.arms = parseInt(next() ?? "0", 10);
+                defaults.arms = parseInteger(next(), arg);
                 break;
             case "--planets":
-                defaults.planets = parseInt(next() ?? "0", 10);
+                defaults.planets = parseInteger(next(), arg);
                 break;
             case "--png-scale":
-                defaults.pngScale = parseFloat(next() ?? "1");
+                defaults.pngScale = parseDecimal(next(), arg);
                 break;
             case "--scanlines":
                 defaults.scanlines = true;
@@ -134,10 +139,11 @@ function parseArgs(): CliArgs {
                 defaults.listStyles = true;
                 break;
             default:
-                console.warn(`Unknown argument: ${arg}`);
+                throw new Error(`Unknown argument: ${arg}`);
         }
     }
 
+    validateCommonArgs(defaults);
     return defaults;
 }
 
