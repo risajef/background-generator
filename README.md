@@ -109,3 +109,9 @@ When composing multiple SVGs into one document, pass a unique `idPrefix` (for ex
 All six CLI commands support `--no-png`. PNG scale must be between 1 and 4; use `--no-png` to disable raster export rather than setting scale to zero. Batch count is bounded to 1–100; canvas dimensions are positive integers up to 8192, with a combined limit of 16,777,216 pixels. Count overrides also have per-generator and aggregate complexity limits; invalid settings exit with an error.
 
 `planets` is an exact total distributed across the requested systems, including zero. Orbit capacity grows to fit the total. With zero systems, zero planets are rendered. Polygalaxy results expose actual `counts` and separate `requestedCounts` so consumers can distinguish these cases.
+
+### Browser generation and export
+
+Serve `web/` over HTTP after `npm run build:web`; include both `dist/app.js` and `dist/generator-worker.js` when embedding. Generation runs in a dedicated worker. Generate replaces any pending request, Cancel terminates it, and requests time out after ten seconds. Validation errors appear beside the preview. PNG export captures the scene at click time, so generating another scene does not change a pending download's contents or filename.
+
+`mount(root)` is exported from the browser bundle; it returns an unmount function that removes listeners and cancels pending generation. Each `.background-generator-app` root is also mounted automatically.

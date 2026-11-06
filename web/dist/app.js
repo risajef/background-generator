@@ -1882,7 +1882,7 @@ function shuffle2(values, rng) {
   return values;
 }
 
-// web/app.ts
+// web/generators.ts
 function numberValue(values, key) {
   const value = values[key];
   if (value === void 0) return void 0;
@@ -2003,7 +2003,7 @@ var botanicalFields = [
   { key: "vines", label: "Vines", type: "number", placeholder: "auto", min: 0 },
   { key: "blooms", label: "Blooms", type: "number", placeholder: "auto", min: 0 },
   { key: "dew", label: "Dew Drops", type: "number", placeholder: "auto", min: 0 },
-  { key: "groundLayers", label: "Ground Layers", type: "number", placeholder: "auto", min: 1 },
+  { key: "groundLayers", label: "Ground Layers", type: "number", placeholder: "auto", min: 2, max: 6 },
   { key: "veil", label: "Veil", type: "checkbox", defaultValue: true },
   { key: "noise", label: "Noise", type: "checkbox", defaultValue: false }
 ];
@@ -2060,12 +2060,228 @@ var GENERATORS = {
     }
   }
 };
+function buildBackgroundOptions(values) {
+  return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
+    width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
+    height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
+    seed: numberValue(values, "seed"),
+    blobCount: numberValue(values, "blobCount"),
+    ribbonCount: numberValue(values, "ribbonCount"),
+    orbCount: numberValue(values, "orbCount"),
+    lightCount: numberValue(values, "lightCount"),
+    lineCount: numberValue(values, "lineCount"),
+    triangleCount: numberValue(values, "triangleCount"),
+    waveCount: numberValue(values, "waveCount")
+  };
+}
+function buildPolygalaxyOptions(values) {
+  return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(POLYGALAXY_THEMES, values.theme),
+    style: catalogKey(POLYGALAXY_STYLES, values.style ?? "aura", "style"),
+    stars: numberValue(values, "stars"),
+    facets: numberValue(values, "facets"),
+    rings: numberValue(values, "rings"),
+    threads: numberValue(values, "threads"),
+    glows: numberValue(values, "glows"),
+    constellations: numberValue(values, "constellations"),
+    systems: numberValue(values, "systems"),
+    arms: numberValue(values, "arms"),
+    planets: numberValue(values, "planets"),
+    scanlines: booleanValue(values, "scanlines") ?? false
+  };
+}
+function buildTerrainOptions(values) {
+  return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(TERRAIN_THEMES, values.theme),
+    mountains: numberValue(values, "mountains"),
+    trees: numberValue(values, "trees"),
+    clouds: numberValue(values, "clouds"),
+    fog: booleanValue(values, "fog") ?? false,
+    noise: booleanValue(values, "noise") ?? false,
+    moon: booleanValue(values, "moon") ?? false
+  };
+}
+function buildSkylineOptions(values) {
+  const minBuildings = numberValue(values, "buildingMin") ?? 8;
+  const maxBuildings = numberValue(values, "buildingMax") ?? 18;
+  const windowDensity = numberValue(values, "windowDensity") ?? 0.55;
+  return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(SKYLINE_THEMES, values.theme),
+    layers: numberValue(values, "layers") ?? 3,
+    buildingsPerLayer: [minBuildings, maxBuildings],
+    windowDensity,
+    stars: booleanValue(values, "stars"),
+    haze: booleanValue(values, "haze"),
+    rooftopDetails: booleanValue(values, "rooftops"),
+    water: booleanValue(values, "water"),
+    traffic: booleanValue(values, "traffic")
+  };
+}
+function buildBotanicalOptions(values) {
+  return {
+    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(BOTANICAL_THEMES, values.theme),
+    leaves: numberValue(values, "leaves"),
+    fronds: numberValue(values, "fronds"),
+    vines: numberValue(values, "vines"),
+    blooms: numberValue(values, "blooms"),
+    dewDrops: numberValue(values, "dew"),
+    groundLayers: numberValue(values, "groundLayers"),
+    veil: booleanValue(values, "veil"),
+    noise: booleanValue(values, "noise")
+  };
+}
+
+// web/generationClient.ts
+var GenerationClient = class {
+  constructor(createWorker, timeoutMs = 1e4) {
+    this.createWorker = createWorker;
+    this.timeoutMs = timeoutMs;
+    this.stop = null;
+  }
+  cancel() {
+    this.stop?.();
+  }
+  generate(generatorKey, values) {
+    this.cancel();
+    return new Promise((resolve, reject) => {
+      const worker = this.createWorker();
+      let settled = false;
+      let timer;
+      const finish = (result, error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        worker.terminate();
+        if (this.stop === cancel) this.stop = null;
+        if (error) reject(error);
+        else if (result) resolve(result);
+      };
+      const cancel = () => finish(void 0, new Error("Generation cancelled."));
+      this.stop = cancel;
+      timer = setTimeout(() => finish(void 0, new Error("Generation timed out. Reduce scene complexity.")), this.timeoutMs);
+      worker.onmessage = (event) => {
+        if (event.data.ok) finish(event.data.result);
+        else finish(void 0, new Error(event.data.error));
+      };
+      worker.onerror = () => finish(void 0, new Error("Generation worker failed to load or run."));
+      worker.onmessageerror = () => finish(void 0, new Error("Generation worker returned an unreadable result."));
+      try {
+        worker.postMessage({ generatorKey, values });
+      } catch (error) {
+        finish(void 0, error instanceof Error ? error : new Error(String(error)));
+      }
+    });
+  }
+};
+
+// web/downloads.ts
+function buildDownloadFilename(generatorKey, format) {
+  const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+  return `${generatorKey}-${timestamp}.${format}`;
+}
+function triggerDownload(blob, filename) {
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = objectUrl;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+}
+async function renderSvgAsPng(svg) {
+  const { width, height } = parseSvgDimensions(svg);
+  dimensions(width, height);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width));
+  canvas.height = Math.max(1, Math.round(height));
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas 2D context is unavailable.");
+  }
+  const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+  const objectUrl = URL.createObjectURL(svgBlob);
+  try {
+    const image = await loadSvgImage(objectUrl);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) {
+        resolve(blob);
+        return;
+      }
+      reject(new Error("Canvas could not encode the generated PNG."));
+    }, "image/png");
+  });
+}
+function loadSvgImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Generated SVG could not be decoded for PNG export."));
+    image.src = url;
+  });
+}
+function parseSvgDimensions(svg) {
+  const svgDocument = new DOMParser().parseFromString(svg, "image/svg+xml");
+  if (svgDocument.querySelector("parsererror")) {
+    throw new Error("Generated SVG markup is invalid.");
+  }
+  const svgElement = svgDocument.documentElement;
+  const width = parseSvgLength(svgElement.getAttribute("width"));
+  const height = parseSvgLength(svgElement.getAttribute("height"));
+  if (width !== null && height !== null) {
+    return { width, height };
+  }
+  const viewBox = svgElement.getAttribute("viewBox");
+  if (!viewBox) {
+    throw new Error("Generated SVG is missing width and height metadata.");
+  }
+  const values = viewBox.split(/[\s,]+/).map((value) => Number.parseFloat(value)).filter((value) => Number.isFinite(value));
+  if (values.length !== 4 || values[2] <= 0 || values[3] <= 0) {
+    throw new Error("Generated SVG has an invalid viewBox.");
+  }
+  return { width: values[2], height: values[3] };
+}
+function parseSvgLength(value) {
+  if (!value) {
+    return null;
+  }
+  const parsed = Number.parseFloat(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+// web/app.ts
 var mounts = /* @__PURE__ */ new WeakMap();
 var mountCounter = 0;
 function mount(root) {
   const existing = mounts.get(root);
   if (existing) return existing;
   const events = new AbortController();
+  const generation = new GenerationClient(() => new Worker(new URL("./generator-worker.js", import.meta.url), { type: "module" }));
+  let generationRevision = 0;
+  let disposed = false;
+  let pngExportPending = false;
   const instancePrefix = `background-ui-${++mountCounter}`;
   function element(role) {
     const found = root.querySelector(`[data-role="${role}"]`);
@@ -2080,6 +2296,7 @@ function mount(root) {
   const output = element("svg-output");
   const downloadSvgButton = element("download-svg");
   const downloadPngButton = element("download-png");
+  const cancelButton = element("cancel-generation");
   let lastGeneratedAsset = null;
   function init() {
     Object.entries(GENERATORS).forEach(([key, config]) => {
@@ -2088,7 +2305,11 @@ function mount(root) {
       option.textContent = config.label;
       generatorSelect.append(option);
     });
-    generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")), { signal: events.signal });
+    generatorSelect.addEventListener("change", () => {
+      cancelGeneration();
+      renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
+    }, { signal: events.signal });
+    cancelButton.addEventListener("click", cancelGeneration, { signal: events.signal });
     renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
     form.addEventListener("submit", handleSubmit, { signal: events.signal });
     downloadSvgButton.addEventListener("click", handleSvgDownload, { signal: events.signal });
@@ -2151,23 +2372,37 @@ function mount(root) {
       fieldsContainer.append(label);
     });
   }
-  function handleSubmit(event) {
+  function cancelGeneration() {
+    generationRevision += 1;
+    generation.cancel();
+    cancelButton.disabled = true;
+    meta.textContent = "Generation cancelled.";
+  }
+  async function handleSubmit(event) {
     event.preventDefault();
-    const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
-    const config = GENERATORS[generatorKey];
-    const values = collectValues(config.fields);
+    const revision = ++generationRevision;
+    generation.cancel();
+    lastGeneratedAsset = null;
+    setDownloadState(false);
+    preview.replaceChildren();
+    output.value = "";
+    cancelButton.disabled = false;
+    meta.textContent = "Generating\u2026";
     try {
-      const result = config.run({ ...values, idPrefix: instancePrefix });
+      const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
+      const values = collectValues(GENERATORS[generatorKey].fields);
+      const result = await generation.generate(generatorKey, { ...values, idPrefix: instancePrefix });
+      if (disposed || revision !== generationRevision) return;
       preview.innerHTML = result.svg;
       meta.textContent = result.meta;
       output.value = result.svg;
       lastGeneratedAsset = { generatorKey, svg: result.svg };
       setDownloadState(true);
     } catch (error) {
-      lastGeneratedAsset = null;
-      setDownloadState(false);
-      meta.textContent = "Generation failed. Check console for details.";
-      console.error(error);
+      if (disposed || revision !== generationRevision) return;
+      meta.textContent = error instanceof Error ? error.message : "Generation failed.";
+    } finally {
+      if (!disposed && revision === generationRevision) cancelButton.disabled = true;
     }
   }
   function handleSvgDownload() {
@@ -2175,104 +2410,30 @@ function mount(root) {
       return;
     }
     const blob = new Blob([lastGeneratedAsset.svg], { type: "image/svg+xml;charset=utf-8" });
-    triggerDownload(blob, buildDownloadFilename("svg"));
+    triggerDownload(blob, buildDownloadFilename(lastGeneratedAsset.generatorKey, "svg"));
   }
   async function handlePngDownload() {
-    if (!lastGeneratedAsset) {
-      return;
-    }
+    if (!lastGeneratedAsset || pngExportPending) return;
+    const asset = lastGeneratedAsset;
+    const filename = buildDownloadFilename(asset.generatorKey, "png");
+    pngExportPending = true;
     downloadPngButton.disabled = true;
     try {
-      const blob = await renderSvgAsPng(lastGeneratedAsset.svg);
-      triggerDownload(blob, buildDownloadFilename("png"));
+      const blob = await renderSvgAsPng(asset.svg);
+      if (!disposed) triggerDownload(blob, filename);
     } catch (error) {
-      meta.textContent = "PNG export failed. Check console for details.";
-      console.error(error);
+      if (!disposed && lastGeneratedAsset === asset) {
+        meta.textContent = "PNG export failed. Check console for details.";
+        console.error(error);
+      }
     } finally {
-      downloadPngButton.disabled = lastGeneratedAsset === null;
+      pngExportPending = false;
+      if (!disposed) setDownloadState(lastGeneratedAsset !== null);
     }
   }
   function setDownloadState(enabled) {
     downloadSvgButton.disabled = !enabled;
-    downloadPngButton.disabled = !enabled;
-  }
-  function buildDownloadFilename(format) {
-    const generatorKey = lastGeneratedAsset?.generatorKey ?? "generator";
-    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-    return `${generatorKey}-${timestamp}.${format}`;
-  }
-  function triggerDownload(blob, filename) {
-    const objectUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = objectUrl;
-    anchor.download = filename;
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
-  }
-  async function renderSvgAsPng(svg) {
-    const { width, height } = parseSvgDimensions(svg);
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(width));
-    canvas.height = Math.max(1, Math.round(height));
-    const context = canvas.getContext("2d");
-    if (!context) {
-      throw new Error("Canvas 2D context is unavailable.");
-    }
-    const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const objectUrl = URL.createObjectURL(svgBlob);
-    try {
-      const image = await loadSvgImage(objectUrl);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-    } finally {
-      URL.revokeObjectURL(objectUrl);
-    }
-    return new Promise((resolve, reject) => {
-      canvas.toBlob((blob) => {
-        if (blob) {
-          resolve(blob);
-          return;
-        }
-        reject(new Error("Canvas could not encode the generated PNG."));
-      }, "image/png");
-    });
-  }
-  function loadSvgImage(url) {
-    return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = () => reject(new Error("Generated SVG could not be decoded for PNG export."));
-      image.src = url;
-    });
-  }
-  function parseSvgDimensions(svg) {
-    const svgDocument = new DOMParser().parseFromString(svg, "image/svg+xml");
-    if (svgDocument.querySelector("parsererror")) {
-      throw new Error("Generated SVG markup is invalid.");
-    }
-    const svgElement = svgDocument.documentElement;
-    const width = parseSvgLength(svgElement.getAttribute("width"));
-    const height = parseSvgLength(svgElement.getAttribute("height"));
-    if (width !== null && height !== null) {
-      return { width, height };
-    }
-    const viewBox = svgElement.getAttribute("viewBox");
-    if (!viewBox) {
-      throw new Error("Generated SVG is missing width and height metadata.");
-    }
-    const values = viewBox.split(/[\s,]+/).map((value) => Number.parseFloat(value)).filter((value) => Number.isFinite(value));
-    if (values.length !== 4 || values[2] <= 0 || values[3] <= 0) {
-      throw new Error("Generated SVG has an invalid viewBox.");
-    }
-    return { width: values[2], height: values[3] };
-  }
-  function parseSvgLength(value) {
-    if (!value) {
-      return null;
-    }
-    const parsed = Number.parseFloat(value);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    downloadPngButton.disabled = !enabled || pngExportPending;
   }
   function collectValues(fields) {
     const values = {};
@@ -2302,6 +2463,9 @@ function mount(root) {
   }
   init();
   const unmount = () => {
+    disposed = true;
+    generationRevision += 1;
+    generation.cancel();
     events.abort();
     generatorSelect.replaceChildren();
     fieldsContainer.replaceChildren();
@@ -2309,96 +2473,6 @@ function mount(root) {
   };
   mounts.set(root, unmount);
   return unmount;
-}
-function buildBackgroundOptions(values) {
-  return {
-    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
-    width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
-    height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
-    seed: numberValue(values, "seed"),
-    blobCount: numberValue(values, "blobCount"),
-    ribbonCount: numberValue(values, "ribbonCount"),
-    orbCount: numberValue(values, "orbCount"),
-    lightCount: numberValue(values, "lightCount"),
-    lineCount: numberValue(values, "lineCount"),
-    triangleCount: numberValue(values, "triangleCount"),
-    waveCount: numberValue(values, "waveCount")
-  };
-}
-function buildPolygalaxyOptions(values) {
-  return {
-    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
-    width: numberValue(values, "width") ?? 5120,
-    height: numberValue(values, "height") ?? 1440,
-    seed: numberValue(values, "seed"),
-    theme: themeKey(POLYGALAXY_THEMES, values.theme),
-    style: catalogKey(POLYGALAXY_STYLES, values.style ?? "aura", "style"),
-    stars: numberValue(values, "stars"),
-    facets: numberValue(values, "facets"),
-    rings: numberValue(values, "rings"),
-    threads: numberValue(values, "threads"),
-    glows: numberValue(values, "glows"),
-    constellations: numberValue(values, "constellations"),
-    systems: numberValue(values, "systems"),
-    arms: numberValue(values, "arms"),
-    planets: numberValue(values, "planets"),
-    scanlines: booleanValue(values, "scanlines") ?? false
-  };
-}
-function buildTerrainOptions(values) {
-  return {
-    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
-    width: numberValue(values, "width") ?? 5120,
-    height: numberValue(values, "height") ?? 1440,
-    seed: numberValue(values, "seed"),
-    theme: themeKey(TERRAIN_THEMES, values.theme),
-    mountains: numberValue(values, "mountains"),
-    trees: numberValue(values, "trees"),
-    clouds: numberValue(values, "clouds"),
-    fog: booleanValue(values, "fog") ?? false,
-    noise: booleanValue(values, "noise") ?? false,
-    moon: booleanValue(values, "moon") ?? false
-  };
-}
-function buildSkylineOptions(values) {
-  const minValue = typeof values.buildingMin === "number" ? values.buildingMin : 8;
-  const maxValue = typeof values.buildingMax === "number" ? values.buildingMax : 18;
-  const minBuildings = Math.min(minValue, maxValue);
-  const maxBuildings = Math.max(minValue, maxValue);
-  const rawDensity = typeof values.windowDensity === "number" ? values.windowDensity : 0.55;
-  const windowDensity = Math.max(0, Math.min(1, rawDensity));
-  return {
-    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
-    width: numberValue(values, "width") ?? 5120,
-    height: numberValue(values, "height") ?? 1440,
-    seed: numberValue(values, "seed"),
-    theme: themeKey(SKYLINE_THEMES, values.theme),
-    layers: numberValue(values, "layers") ?? 3,
-    buildingsPerLayer: [minBuildings, maxBuildings],
-    windowDensity,
-    stars: booleanValue(values, "stars"),
-    haze: booleanValue(values, "haze"),
-    rooftopDetails: booleanValue(values, "rooftops"),
-    water: booleanValue(values, "water"),
-    traffic: booleanValue(values, "traffic")
-  };
-}
-function buildBotanicalOptions(values) {
-  return {
-    idPrefix: typeof values.idPrefix === "string" ? values.idPrefix : void 0,
-    width: numberValue(values, "width") ?? 5120,
-    height: numberValue(values, "height") ?? 1440,
-    seed: numberValue(values, "seed"),
-    theme: themeKey(BOTANICAL_THEMES, values.theme),
-    leaves: numberValue(values, "leaves"),
-    fronds: numberValue(values, "fronds"),
-    vines: numberValue(values, "vines"),
-    blooms: numberValue(values, "blooms"),
-    dewDrops: numberValue(values, "dew"),
-    groundLayers: numberValue(values, "groundLayers"),
-    veil: booleanValue(values, "veil"),
-    noise: booleanValue(values, "noise")
-  };
 }
 document.querySelectorAll(".background-generator-app").forEach((root) => mount(root));
 export {
