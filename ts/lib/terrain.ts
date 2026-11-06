@@ -1,19 +1,20 @@
+import { freezeCatalog, catalogKey } from "./catalog";
 import { SvgBuilder as SceneBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface BiomeTheme {
-    name: string;
-    skyTop: string;
-    skyBottom: string;
-    sun: string;
-    sunGlow: string;
-    mountainPalette: [string, string, string];
-    treePalette: [string, string];
-    riverMain: string;
-    riverHighlight: string;
-    cloud: string;
-    fog: string;
+    readonly name: string;
+    readonly skyTop: string;
+    readonly skyBottom: string;
+    readonly sun: string;
+    readonly sunGlow: string;
+    readonly mountainPalette: readonly [string, string, string];
+    readonly treePalette: readonly [string, string];
+    readonly riverMain: string;
+    readonly riverHighlight: string;
+    readonly cloud: string;
+    readonly fog: string;
 }
 
 export interface TerrainOptions {
@@ -36,7 +37,7 @@ export interface TerrainResult {
     theme: BiomeTheme;
 }
 
-const THEMES: Record<string, BiomeTheme> = {
+const THEMES = freezeCatalog({
     dawn: {
         name: "Dawn",
         skyTop: "#2f3c75",
@@ -89,7 +90,7 @@ const THEMES: Record<string, BiomeTheme> = {
         cloud: "#c7ffd8",
         fog: "#7cb09f",
     },
-};
+} satisfies Record<string, BiomeTheme>);
 
 export const TERRAIN_THEMES = THEMES;
 
@@ -127,7 +128,7 @@ function pickTheme(rng: RNG, key: keyof typeof THEMES | "random"): BiomeTheme {
         const entries = Object.values(THEMES);
         return entries[rng.int(0, entries.length - 1)];
     }
-    return THEMES[key];
+    return THEMES[catalogKey(THEMES, key, "theme")];
 }
 
 function addSky(builder: SceneBuilder, theme: BiomeTheme, moon: boolean): void {

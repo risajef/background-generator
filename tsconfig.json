@@ -6,10 +6,12 @@
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "noEmit": true
+    "noEmit": true,
+    "noUnusedLocals": true
   },
   "include": [
-    "ts/**/*.ts"
+    "ts/**/*.ts",
+    "tests/types.ts"
   ],
   "exclude": [
     "node_modules",

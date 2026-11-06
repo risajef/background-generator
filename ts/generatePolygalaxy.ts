@@ -1,5 +1,6 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
+import { catalogKey, themeKey } from "./lib/catalog";
 import fs from "node:fs";
 import path from "node:path";
 import { generatePolygalaxySvg, PolygalaxyOptions, POLYGALAXY_THEMES, POLYGALAXY_STYLES } from "./lib/polygalaxy";
@@ -84,20 +85,12 @@ function parseArgs(): CliArgs {
                 break;
             case "--theme": {
                 const value = next();
-                if (value && (value in POLYGALAXY_THEMES || value === "random")) {
-                    defaults.theme = value as ThemeKey | "random";
-                } else {
-                    throw new Error(`Invalid value for ${arg}: ${value}`);
-                }
+                defaults.theme = themeKey(POLYGALAXY_THEMES, value);
                 break;
             }
             case "--style": {
                 const value = next();
-                if (value && value in POLYGALAXY_STYLES) {
-                    defaults.style = value as StyleKey;
-                } else {
-                    throw new Error(`Invalid value for ${arg}: ${value}`);
-                }
+                defaults.style = catalogKey(POLYGALAXY_STYLES, value, "style");
                 break;
             }
             case "--stars":

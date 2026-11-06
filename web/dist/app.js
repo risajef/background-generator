@@ -1,13 +1,30 @@
+// ts/lib/catalog.ts
+function freezeCatalog(value) {
+  for (const child of Object.values(value)) {
+    if (child !== null && typeof child === "object") freezeCatalog(child);
+  }
+  return Object.freeze(value);
+}
+function catalogKey(catalog, value, label) {
+  if (typeof value !== "string" || !Object.prototype.hasOwnProperty.call(catalog, value)) {
+    throw new Error(`Unknown ${label}: ${String(value)}`);
+  }
+  return value;
+}
+function themeKey(catalog, value) {
+  return value === void 0 || value === "random" ? "random" : catalogKey(catalog, value, "theme");
+}
+
 // ts/lib/svgBuilder.ts
 var SvgBuilder = class {
   constructor(width, height, idPrefix) {
     this.width = width;
     this.height = height;
     this.idPrefix = idPrefix;
+    this.defs = [];
+    this.layers = [];
+    this.counter = 0;
   }
-  defs = [];
-  layers = [];
-  counter = 0;
   id(local) {
     return `${this.idPrefix}-${local}`;
   }
@@ -75,7 +92,6 @@ function validateOptions(options, counts, booleans = []) {
 
 // ts/lib/rng.ts
 var RNG = class {
-  state;
   constructor(seed = Date.now()) {
     this.state = seed >>> 0;
   }
@@ -456,7 +472,7 @@ function createSvg(rng, options, palette) {
 }
 
 // ts/lib/polygalaxy.ts
-var THEMES = {
+var THEMES = freezeCatalog({
   nocturne: {
     name: "Nocturne",
     background: ["#050912", "#0c1d3c", "#46237a"],
@@ -501,8 +517,8 @@ var THEMES = {
     grid: "#351f39",
     accent: "#ff66c4"
   }
-};
-var STYLE_PRESETS = {
+});
+var STYLE_PRESETS = freezeCatalog({
   aura: {
     facets: [6, 9],
     rings: [4, 6],
@@ -536,7 +552,7 @@ var STYLE_PRESETS = {
     arms: [2, 3],
     planets: [5, 9]
   }
-};
+});
 var POLYGALAXY_THEMES = THEMES;
 var POLYGALAXY_STYLES = STYLE_PRESETS;
 function generatePolygalaxySvg(options = {}) {
@@ -545,8 +561,8 @@ function generatePolygalaxySvg(options = {}) {
   const rng = new RNG(seed);
   const width = options.width ?? 5120;
   const height = options.height ?? 1440;
-  const themeKey = options.theme ?? "random";
-  const theme = pickTheme(rng, themeKey);
+  const themeKey2 = options.theme ?? "random";
+  const theme = pickTheme(rng, themeKey2);
   const counts = resolveStyle(rng, options.style ?? "aura", options);
   const builder = new SvgBuilder(width, height, options.idPrefix ?? "polygalaxy");
   addBackground(builder, theme);
@@ -573,10 +589,10 @@ function pickTheme(rng, key) {
     const entries = Object.values(THEMES);
     return entries[rng.int(0, entries.length - 1)];
   }
-  return THEMES[key];
+  return THEMES[catalogKey(THEMES, key, "theme")];
 }
 function resolveStyle(rng, style, overrides) {
-  const preset = STYLE_PRESETS[style];
+  const preset = STYLE_PRESETS[catalogKey(STYLE_PRESETS, style, "style")];
   const resolved = {};
   for (const key of Object.keys(preset)) {
     const range = preset[key];
@@ -867,7 +883,7 @@ function shuffle(values, rng) {
 }
 
 // ts/lib/terrain.ts
-var THEMES2 = {
+var THEMES2 = freezeCatalog({
   dawn: {
     name: "Dawn",
     skyTop: "#2f3c75",
@@ -920,7 +936,7 @@ var THEMES2 = {
     cloud: "#c7ffd8",
     fog: "#7cb09f"
   }
-};
+});
 var TERRAIN_THEMES = THEMES2;
 function generateTerrainSvg(options = {}) {
   validateOptions(options, { mountains: [1, 20, 50], trees: [0, 2e3, 2], clouds: [0, 300, 2] }, ["fog", "noise", "moon"]);
@@ -952,7 +968,7 @@ function pickTheme2(rng, key) {
     const entries = Object.values(THEMES2);
     return entries[rng.int(0, entries.length - 1)];
   }
-  return THEMES2[key];
+  return THEMES2[catalogKey(THEMES2, key, "theme")];
 }
 function addSky(builder, theme, moon) {
   const gradId = builder.uid("sky");
@@ -1073,7 +1089,7 @@ function addNoise(builder) {
 }
 
 // ts/lib/skyline.ts
-var THEMES3 = {
+var THEMES3 = freezeCatalog({
   ember: {
     name: "Ember Dusk",
     skyGradient: ["#120c42", "#ff5f6d"],
@@ -1119,7 +1135,7 @@ var THEMES3 = {
     trafficLights: ["#ff0266", "#f8ff95"],
     road: "#2b0530"
   }
-};
+});
 var SKYLINE_THEMES = THEMES3;
 function generateSkylineSvg(options = {}) {
   validateOptions(options, { layers: [1, 5] }, ["stars", "haze", "rooftopDetails", "water", "traffic"]);
@@ -1161,7 +1177,7 @@ function pickTheme3(rng, key) {
     const entries = Object.values(THEMES3);
     return entries[rng.int(0, entries.length - 1)];
   }
-  return THEMES3[key];
+  return THEMES3[catalogKey(THEMES3, key, "theme")];
 }
 function addSky2(builder, theme) {
   const gradId = builder.uid("sky");
@@ -1464,7 +1480,7 @@ function clamp(value, min, max) {
 }
 
 // ts/lib/botanical.ts
-var THEMES4 = {
+var THEMES4 = freezeCatalog({
   canopy: {
     name: "Forest Canopy",
     backgroundTop: "#0b2b2b",
@@ -1533,7 +1549,7 @@ var THEMES4 = {
     groundLayers: ["#22184f", "#321d59", "#431c63"],
     mist: "#ffd6e0"
   }
-};
+});
 var BOTANICAL_THEMES = THEMES4;
 function generateBotanicalSvg(options = {}) {
   validateOptions(options, { leaves: [0, 500, 5], fronds: [0, 200, 20], vines: [0, 100, 10], blooms: [0, 300, 10], dewDrops: [0, 2e3], groundLayers: [2, 6] }, ["veil", "noise"]);
@@ -1572,7 +1588,7 @@ function pickTheme4(rng, key) {
     const entries = Object.values(THEMES4);
     return entries[rng.int(0, entries.length - 1)];
   }
-  return THEMES4[key];
+  return THEMES4[catalogKey(THEMES4, key, "theme")];
 }
 function resolveCounts(rng, options) {
   return {
@@ -1869,6 +1885,18 @@ function shuffle2(values, rng) {
 }
 
 // web/app.ts
+function numberValue(values, key) {
+  const value = values[key];
+  if (value === void 0) return void 0;
+  if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError(`${key} must be finite`);
+  return value;
+}
+function booleanValue(values, key) {
+  const value = values[key];
+  if (value === void 0) return void 0;
+  if (typeof value !== "boolean") throw new TypeError(`${key} must be boolean`);
+  return value;
+}
 var backgroundFields = [
   { key: "width", label: "Width", type: "number", defaultValue: BACKGROUND_DEFAULTS.width, min: 320 },
   { key: "height", label: "Height", type: "number", defaultValue: BACKGROUND_DEFAULTS.height, min: 200 },
@@ -2050,8 +2078,8 @@ function init() {
     option.textContent = config.label;
     generatorSelect.append(option);
   });
-  generatorSelect.addEventListener("change", () => renderFields(generatorSelect.value));
-  renderFields(generatorSelect.value);
+  generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")));
+  renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
   form.addEventListener("submit", handleSubmit);
   downloadSvgButton.addEventListener("click", handleSvgDownload);
   downloadPngButton.addEventListener("click", () => {
@@ -2115,7 +2143,7 @@ function renderFields(generatorKey) {
 }
 function handleSubmit(event) {
   event.preventDefault();
-  const generatorKey = generatorSelect.value;
+  const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
   const config = GENERATORS[generatorKey];
   const values = collectValues(config.fields);
   try {
@@ -2253,7 +2281,7 @@ function collectValues(fields) {
     }
     if (field.type === "number") {
       const parsed = Number(value);
-      if (!Number.isNaN(parsed)) {
+      if (Number.isFinite(parsed)) {
         values[field.key] = parsed;
       }
       return;
@@ -2264,49 +2292,49 @@ function collectValues(fields) {
 }
 function buildBackgroundOptions(values) {
   return {
-    width: values.width ?? BACKGROUND_DEFAULTS.width,
-    height: values.height ?? BACKGROUND_DEFAULTS.height,
-    seed: values.seed,
-    blobCount: values.blobCount,
-    ribbonCount: values.ribbonCount,
-    orbCount: values.orbCount,
-    lightCount: values.lightCount,
-    lineCount: values.lineCount,
-    triangleCount: values.triangleCount,
-    waveCount: values.waveCount
+    width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
+    height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
+    seed: numberValue(values, "seed"),
+    blobCount: numberValue(values, "blobCount"),
+    ribbonCount: numberValue(values, "ribbonCount"),
+    orbCount: numberValue(values, "orbCount"),
+    lightCount: numberValue(values, "lightCount"),
+    lineCount: numberValue(values, "lineCount"),
+    triangleCount: numberValue(values, "triangleCount"),
+    waveCount: numberValue(values, "waveCount")
   };
 }
 function buildPolygalaxyOptions(values) {
   return {
-    width: values.width ?? 5120,
-    height: values.height ?? 1440,
-    seed: values.seed,
-    theme: values.theme,
-    style: values.style,
-    stars: values.stars,
-    facets: values.facets,
-    rings: values.rings,
-    threads: values.threads,
-    glows: values.glows,
-    constellations: values.constellations,
-    systems: values.systems,
-    arms: values.arms,
-    planets: values.planets,
-    scanlines: values.scanlines ?? false
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(POLYGALAXY_THEMES, values.theme),
+    style: catalogKey(POLYGALAXY_STYLES, values.style ?? "aura", "style"),
+    stars: numberValue(values, "stars"),
+    facets: numberValue(values, "facets"),
+    rings: numberValue(values, "rings"),
+    threads: numberValue(values, "threads"),
+    glows: numberValue(values, "glows"),
+    constellations: numberValue(values, "constellations"),
+    systems: numberValue(values, "systems"),
+    arms: numberValue(values, "arms"),
+    planets: numberValue(values, "planets"),
+    scanlines: booleanValue(values, "scanlines") ?? false
   };
 }
 function buildTerrainOptions(values) {
   return {
-    width: values.width ?? 5120,
-    height: values.height ?? 1440,
-    seed: values.seed,
-    theme: values.theme,
-    mountains: values.mountains,
-    trees: values.trees,
-    clouds: values.clouds,
-    fog: values.fog ?? false,
-    noise: values.noise ?? false,
-    moon: values.moon ?? false
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(TERRAIN_THEMES, values.theme),
+    mountains: numberValue(values, "mountains"),
+    trees: numberValue(values, "trees"),
+    clouds: numberValue(values, "clouds"),
+    fog: booleanValue(values, "fog") ?? false,
+    noise: booleanValue(values, "noise") ?? false,
+    moon: booleanValue(values, "moon") ?? false
   };
 }
 function buildSkylineOptions(values) {
@@ -2317,34 +2345,34 @@ function buildSkylineOptions(values) {
   const rawDensity = typeof values.windowDensity === "number" ? values.windowDensity : 0.55;
   const windowDensity = Math.max(0, Math.min(1, rawDensity));
   return {
-    width: values.width ?? 5120,
-    height: values.height ?? 1440,
-    seed: values.seed,
-    theme: values.theme,
-    layers: values.layers ?? 3,
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(SKYLINE_THEMES, values.theme),
+    layers: numberValue(values, "layers") ?? 3,
     buildingsPerLayer: [minBuildings, maxBuildings],
     windowDensity,
-    stars: values.stars,
-    haze: values.haze,
-    rooftopDetails: values.rooftops,
-    water: values.water,
-    traffic: values.traffic
+    stars: booleanValue(values, "stars"),
+    haze: booleanValue(values, "haze"),
+    rooftopDetails: booleanValue(values, "rooftops"),
+    water: booleanValue(values, "water"),
+    traffic: booleanValue(values, "traffic")
   };
 }
 function buildBotanicalOptions(values) {
   return {
-    width: values.width ?? 5120,
-    height: values.height ?? 1440,
-    seed: values.seed,
-    theme: values.theme,
-    leaves: values.leaves,
-    fronds: values.fronds,
-    vines: values.vines,
-    blooms: values.blooms,
-    dewDrops: values.dew,
-    groundLayers: values.groundLayers,
-    veil: values.veil,
-    noise: values.noise
+    width: numberValue(values, "width") ?? 5120,
+    height: numberValue(values, "height") ?? 1440,
+    seed: numberValue(values, "seed"),
+    theme: themeKey(BOTANICAL_THEMES, values.theme),
+    leaves: numberValue(values, "leaves"),
+    fronds: numberValue(values, "fronds"),
+    vines: numberValue(values, "vines"),
+    blooms: numberValue(values, "blooms"),
+    dewDrops: numberValue(values, "dew"),
+    groundLayers: numberValue(values, "groundLayers"),
+    veil: booleanValue(values, "veil"),
+    noise: booleanValue(values, "noise")
   };
 }
 init();

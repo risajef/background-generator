@@ -1,5 +1,6 @@
 #!/usr/bin/env ts-node
 import { argumentValue, parseInteger, parseDecimal, validateCommonArgs } from "./cli/arguments";
+import { themeKey } from "./lib/catalog";
 import fs from "node:fs";
 import path from "node:path";
 import { generateBotanicalSvg, BotanicalOptions, BOTANICAL_THEMES } from "./lib/botanical";
@@ -75,11 +76,7 @@ function parseArgs(): CliArgs {
                 break;
             case "--theme": {
                 const value = next();
-                if (value && (value in BOTANICAL_THEMES || value === "random")) {
-                    defaults.theme = value as ThemeKey | "random";
-                } else {
-                    throw new Error(`Invalid value for ${arg}: ${value}`);
-                }
+                defaults.theme = themeKey(BOTANICAL_THEMES, value);
                 break;
             }
             case "--leaves":

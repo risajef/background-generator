@@ -1,29 +1,30 @@
+import { freezeCatalog, catalogKey } from "./catalog";
 import { SvgBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface Theme {
-    name: string;
-    background: [string, string, string];
-    halo: [string, string];
-    facets: [string, string, string];
-    glows: [string, string];
-    thread: string;
-    star: string;
-    grid: string;
-    accent: string;
+    readonly name: string;
+    readonly background: readonly [string, string, string];
+    readonly halo: readonly [string, string];
+    readonly facets: readonly [string, string, string];
+    readonly glows: readonly [string, string];
+    readonly thread: string;
+    readonly star: string;
+    readonly grid: string;
+    readonly accent: string;
 }
 
 export interface StylePreset {
-    facets: [number, number];
-    rings: [number, number];
-    threads: [number, number];
-    glows: [number, number];
-    constellations: [number, number];
-    stars: [number, number];
-    systems: [number, number];
-    arms: [number, number];
-    planets: [number, number];
+    readonly facets: readonly [number, number];
+    readonly rings: readonly [number, number];
+    readonly threads: readonly [number, number];
+    readonly glows: readonly [number, number];
+    readonly constellations: readonly [number, number];
+    readonly stars: readonly [number, number];
+    readonly systems: readonly [number, number];
+    readonly arms: readonly [number, number];
+    readonly planets: readonly [number, number];
 }
 
 export interface PolygalaxyOptions {
@@ -52,7 +53,7 @@ export interface PolygalaxyResult {
     counts: Record<string, number>;
 }
 
-const THEMES: Record<string, Theme> = {
+const THEMES = freezeCatalog({
     nocturne: {
         name: "Nocturne",
         background: ["#050912", "#0c1d3c", "#46237a"],
@@ -97,9 +98,9 @@ const THEMES: Record<string, Theme> = {
         grid: "#351f39",
         accent: "#ff66c4",
     },
-};
+} satisfies Record<string, Theme>);
 
-const STYLE_PRESETS: Record<string, StylePreset> = {
+const STYLE_PRESETS = freezeCatalog({
     aura: {
         facets: [6, 9],
         rings: [4, 6],
@@ -133,7 +134,7 @@ const STYLE_PRESETS: Record<string, StylePreset> = {
         arms: [2, 3],
         planets: [5, 9],
     },
-};
+} satisfies Record<string, StylePreset>);
 
 export const POLYGALAXY_THEMES = THEMES;
 export const POLYGALAXY_STYLES = STYLE_PRESETS;
@@ -176,7 +177,7 @@ function pickTheme(rng: RNG, key: keyof typeof THEMES | "random"): Theme {
         const entries = Object.values(THEMES);
         return entries[rng.int(0, entries.length - 1)];
     }
-    return THEMES[key];
+    return THEMES[catalogKey(THEMES, key, "theme")];
 }
 
 function resolveStyle(
@@ -184,7 +185,7 @@ function resolveStyle(
     style: keyof typeof STYLE_PRESETS,
     overrides: PolygalaxyOptions,
 ): Record<string, number> {
-    const preset = STYLE_PRESETS[style];
+    const preset = STYLE_PRESETS[catalogKey(STYLE_PRESETS, style, "style")];
     const resolved: Record<string, number> = {};
     for (const key of Object.keys(preset) as Array<keyof StylePreset>) {
         const range = preset[key];

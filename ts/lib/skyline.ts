@@ -1,21 +1,22 @@
+import { freezeCatalog, catalogKey } from "./catalog";
 import { SvgBuilder as CityBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface SkylineTheme {
-    name: string;
-    skyGradient: [string, string];
-    horizonGlow: string;
-    aurora: string;
-    buildingBases: [string, string, string];
-    windowLit: [string, string];
-    windowDim: string;
-    neon: string;
-    star: string;
-    haze: string;
-    waterSurface: [string, string];
-    trafficLights: [string, string];
-    road: string;
+    readonly name: string;
+    readonly skyGradient: readonly [string, string];
+    readonly horizonGlow: string;
+    readonly aurora: string;
+    readonly buildingBases: readonly [string, string, string];
+    readonly windowLit: readonly [string, string];
+    readonly windowDim: string;
+    readonly neon: string;
+    readonly star: string;
+    readonly haze: string;
+    readonly waterSurface: readonly [string, string];
+    readonly trafficLights: readonly [string, string];
+    readonly road: string;
 }
 
 export interface SkylineOptions {
@@ -41,7 +42,7 @@ export interface SkylineResult {
     buildingCount: number;
 }
 
-const THEMES: Record<string, SkylineTheme> = {
+const THEMES = freezeCatalog({
     ember: {
         name: "Ember Dusk",
         skyGradient: ["#120c42", "#ff5f6d"],
@@ -87,7 +88,7 @@ const THEMES: Record<string, SkylineTheme> = {
         trafficLights: ["#ff0266", "#f8ff95"],
         road: "#2b0530",
     },
-};
+} satisfies Record<string, SkylineTheme>);
 
 export const SKYLINE_THEMES = THEMES;
 
@@ -147,7 +148,7 @@ function pickTheme(rng: RNG, key: keyof typeof THEMES | "random"): SkylineTheme 
         const entries = Object.values(THEMES);
         return entries[rng.int(0, entries.length - 1)];
     }
-    return THEMES[key];
+    return THEMES[catalogKey(THEMES, key, "theme")];
 }
 
 function addSky(builder: CityBuilder, theme: SkylineTheme): void {

@@ -1,3 +1,4 @@
+import { catalogKey, themeKey } from "../ts/lib/catalog";
 import { generateBackgroundSvg, BACKGROUND_DEFAULTS, BackgroundOptions } from "../ts/lib/background";
 import { generatePolygalaxySvg, POLYGALAXY_THEMES, POLYGALAXY_STYLES, PolygalaxyOptions } from "../ts/lib/polygalaxy";
 import { generateTerrainSvg, TERRAIN_THEMES, TerrainOptions } from "../ts/lib/terrain";
@@ -44,6 +45,18 @@ type GeneratorKey = keyof typeof GENERATORS;
 type DownloadFormat = "svg" | "png";
 
 type ValueMap = Record<string, unknown>;
+function numberValue(values: ValueMap, key: string): number | undefined {
+    const value = values[key];
+    if (value === undefined) return undefined;
+    if (typeof value !== "number" || !Number.isFinite(value)) throw new TypeError(`${key} must be finite`);
+    return value;
+}
+function booleanValue(values: ValueMap, key: string): boolean | undefined {
+    const value = values[key];
+    if (value === undefined) return undefined;
+    if (typeof value !== "boolean") throw new TypeError(`${key} must be boolean`);
+    return value;
+}
 
 const backgroundFields: FieldConfig[] = [
     { key: "width", label: "Width", type: "number", defaultValue: BACKGROUND_DEFAULTS.width, min: 320 },
@@ -162,11 +175,11 @@ const botanicalFields: FieldConfig[] = [
     { key: "noise", label: "Noise", type: "checkbox", defaultValue: false },
 ];
 
-const GENERATORS: Record<string, GeneratorConfig> = {
+const GENERATORS = {
     background: {
         label: "Gradient Background",
         fields: backgroundFields,
-        run(values) {
+        run(values: ValueMap) {
             const options: BackgroundOptions = buildBackgroundOptions(values);
             const { svg, seed, palette } = generateBackgroundSvg(options);
             return { svg, meta: `Seed ${seed} • Palette ${palette.gradient.join(" / ")}` };
@@ -175,7 +188,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     polygalaxy: {
         label: "Polygalaxy",
         fields: polygalaxyFields,
-        run(values) {
+        run(values: ValueMap) {
             const options: PolygalaxyOptions = buildPolygalaxyOptions(values);
             const result = generatePolygalaxySvg(options);
             return { svg: result.svg, meta: `${result.theme.name} • Seed ${result.seed}` };
@@ -184,7 +197,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     terrain: {
         label: "Terrain Poem",
         fields: terrainFields,
-        run(values) {
+        run(values: ValueMap) {
             const options: TerrainOptions = buildTerrainOptions(values);
             const result = generateTerrainSvg(options);
             return { svg: result.svg, meta: `${result.theme.name} • Seed ${result.seed}` };
@@ -193,7 +206,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     skyline: {
         label: "Urban Skyline",
         fields: skylineFields,
-        run(values) {
+        run(values: ValueMap) {
             const options: SkylineOptions = buildSkylineOptions(values);
             const result = generateSkylineSvg(options);
             return {
@@ -205,7 +218,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
     botanical: {
         label: "Botanical Garden",
         fields: botanicalFields,
-        run(values) {
+        run(values: ValueMap) {
             const options: BotanicalOptions = buildBotanicalOptions(values);
             const result = generateBotanicalSvg(options);
             return {
@@ -214,7 +227,7 @@ const GENERATORS: Record<string, GeneratorConfig> = {
             };
         },
     },
-};
+} satisfies Record<string, GeneratorConfig>;
 
 const form = document.getElementById("generator-form") as HTMLFormElement;
 const generatorSelect = document.getElementById("generator-select") as HTMLSelectElement;
@@ -234,8 +247,8 @@ function init(): void {
         option.textContent = config.label;
         generatorSelect.append(option);
     });
-    generatorSelect.addEventListener("change", () => renderFields(generatorSelect.value as GeneratorKey));
-    renderFields(generatorSelect.value as GeneratorKey);
+    generatorSelect.addEventListener("change", () => renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator")));
+    renderFields(catalogKey(GENERATORS, generatorSelect.value, "generator"));
     form.addEventListener("submit", handleSubmit);
     downloadSvgButton.addEventListener("click", handleSvgDownload);
     downloadPngButton.addEventListener("click", () => {
@@ -301,7 +314,7 @@ function renderFields(generatorKey: GeneratorKey): void {
 
 function handleSubmit(event: SubmitEvent): void {
     event.preventDefault();
-    const generatorKey = generatorSelect.value as GeneratorKey;
+    const generatorKey = catalogKey(GENERATORS, generatorSelect.value, "generator");
     const config = GENERATORS[generatorKey];
     const values = collectValues(config.fields);
     try {
@@ -452,7 +465,7 @@ function collectValues(fields: FieldConfig[]): ValueMap {
         }
         if (field.type === "number") {
             const parsed = Number(value);
-            if (!Number.isNaN(parsed)) {
+            if (Number.isFinite(parsed)) {
                 values[field.key] = parsed;
             }
             return;
@@ -464,51 +477,51 @@ function collectValues(fields: FieldConfig[]): ValueMap {
 
 function buildBackgroundOptions(values: ValueMap): BackgroundOptions {
     return {
-        width: (values.width as number) ?? BACKGROUND_DEFAULTS.width,
-        height: (values.height as number) ?? BACKGROUND_DEFAULTS.height,
-        seed: values.seed as number | undefined,
-        blobCount: values.blobCount as number | undefined,
-        ribbonCount: values.ribbonCount as number | undefined,
-        orbCount: values.orbCount as number | undefined,
-        lightCount: values.lightCount as number | undefined,
-        lineCount: values.lineCount as number | undefined,
-        triangleCount: values.triangleCount as number | undefined,
-        waveCount: values.waveCount as number | undefined,
+        width: numberValue(values, "width") ?? BACKGROUND_DEFAULTS.width,
+        height: numberValue(values, "height") ?? BACKGROUND_DEFAULTS.height,
+        seed: numberValue(values, "seed"),
+        blobCount: numberValue(values, "blobCount"),
+        ribbonCount: numberValue(values, "ribbonCount"),
+        orbCount: numberValue(values, "orbCount"),
+        lightCount: numberValue(values, "lightCount"),
+        lineCount: numberValue(values, "lineCount"),
+        triangleCount: numberValue(values, "triangleCount"),
+        waveCount: numberValue(values, "waveCount"),
     };
 }
 
 function buildPolygalaxyOptions(values: ValueMap): PolygalaxyOptions {
     return {
-        width: (values.width as number) ?? 5120,
-        height: (values.height as number) ?? 1440,
-        seed: values.seed as number | undefined,
-        theme: (values.theme as string | undefined) as PolygalaxyOptions["theme"],
-        style: (values.style as string | undefined) as PolygalaxyOptions["style"],
-        stars: values.stars as number | undefined,
-        facets: values.facets as number | undefined,
-        rings: values.rings as number | undefined,
-        threads: values.threads as number | undefined,
-        glows: values.glows as number | undefined,
-        constellations: values.constellations as number | undefined,
-        systems: values.systems as number | undefined,
-        arms: values.arms as number | undefined,
-        planets: values.planets as number | undefined,
-        scanlines: (values.scanlines as boolean | undefined) ?? false,
+        width: numberValue(values, "width") ?? 5120,
+        height: numberValue(values, "height") ?? 1440,
+        seed: numberValue(values, "seed"),
+        theme: themeKey(POLYGALAXY_THEMES, values.theme),
+        style: catalogKey(POLYGALAXY_STYLES, values.style ?? "aura", "style"),
+        stars: numberValue(values, "stars"),
+        facets: numberValue(values, "facets"),
+        rings: numberValue(values, "rings"),
+        threads: numberValue(values, "threads"),
+        glows: numberValue(values, "glows"),
+        constellations: numberValue(values, "constellations"),
+        systems: numberValue(values, "systems"),
+        arms: numberValue(values, "arms"),
+        planets: numberValue(values, "planets"),
+        scanlines: (booleanValue(values, "scanlines")) ?? false,
     };
 }
 
 function buildTerrainOptions(values: ValueMap): TerrainOptions {
     return {
-        width: (values.width as number) ?? 5120,
-        height: (values.height as number) ?? 1440,
-        seed: values.seed as number | undefined,
-        theme: (values.theme as string | undefined) as TerrainOptions["theme"],
-        mountains: values.mountains as number | undefined,
-        trees: values.trees as number | undefined,
-        clouds: values.clouds as number | undefined,
-        fog: (values.fog as boolean | undefined) ?? false,
-        noise: (values.noise as boolean | undefined) ?? false,
-        moon: (values.moon as boolean | undefined) ?? false,
+        width: numberValue(values, "width") ?? 5120,
+        height: numberValue(values, "height") ?? 1440,
+        seed: numberValue(values, "seed"),
+        theme: themeKey(TERRAIN_THEMES, values.theme),
+        mountains: numberValue(values, "mountains"),
+        trees: numberValue(values, "trees"),
+        clouds: numberValue(values, "clouds"),
+        fog: (booleanValue(values, "fog")) ?? false,
+        noise: (booleanValue(values, "noise")) ?? false,
+        moon: (booleanValue(values, "moon")) ?? false,
     };
 }
 
@@ -520,35 +533,35 @@ function buildSkylineOptions(values: ValueMap): SkylineOptions {
     const rawDensity = typeof values.windowDensity === "number" ? values.windowDensity : 0.55;
     const windowDensity = Math.max(0, Math.min(1, rawDensity));
     return {
-        width: (values.width as number) ?? 5120,
-        height: (values.height as number) ?? 1440,
-        seed: values.seed as number | undefined,
-        theme: (values.theme as string | undefined) as SkylineOptions["theme"],
-        layers: (values.layers as number | undefined) ?? 3,
+        width: numberValue(values, "width") ?? 5120,
+        height: numberValue(values, "height") ?? 1440,
+        seed: numberValue(values, "seed"),
+        theme: themeKey(SKYLINE_THEMES, values.theme),
+        layers: (numberValue(values, "layers")) ?? 3,
         buildingsPerLayer: [minBuildings, maxBuildings],
         windowDensity,
-        stars: values.stars as boolean | undefined,
-        haze: values.haze as boolean | undefined,
-        rooftopDetails: values.rooftops as boolean | undefined,
-        water: values.water as boolean | undefined,
-        traffic: values.traffic as boolean | undefined,
+        stars: booleanValue(values, "stars"),
+        haze: booleanValue(values, "haze"),
+        rooftopDetails: booleanValue(values, "rooftops"),
+        water: booleanValue(values, "water"),
+        traffic: booleanValue(values, "traffic"),
     };
 }
 
 function buildBotanicalOptions(values: ValueMap): BotanicalOptions {
     return {
-        width: (values.width as number) ?? 5120,
-        height: (values.height as number) ?? 1440,
-        seed: values.seed as number | undefined,
-        theme: (values.theme as string | undefined) as BotanicalOptions["theme"],
-        leaves: values.leaves as number | undefined,
-        fronds: values.fronds as number | undefined,
-        vines: values.vines as number | undefined,
-        blooms: values.blooms as number | undefined,
-        dewDrops: values.dew as number | undefined,
-        groundLayers: values.groundLayers as number | undefined,
-        veil: values.veil as boolean | undefined,
-        noise: values.noise as boolean | undefined,
+        width: numberValue(values, "width") ?? 5120,
+        height: numberValue(values, "height") ?? 1440,
+        seed: numberValue(values, "seed"),
+        theme: themeKey(BOTANICAL_THEMES, values.theme),
+        leaves: numberValue(values, "leaves"),
+        fronds: numberValue(values, "fronds"),
+        vines: numberValue(values, "vines"),
+        blooms: numberValue(values, "blooms"),
+        dewDrops: numberValue(values, "dew"),
+        groundLayers: numberValue(values, "groundLayers"),
+        veil: booleanValue(values, "veil"),
+        noise: booleanValue(values, "noise"),
     };
 }
 

@@ -1,23 +1,24 @@
+import { freezeCatalog, catalogKey } from "./catalog";
 import { SvgBuilder as GardenBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
 export interface BotanicalTheme {
-    name: string;
-    backgroundTop: string;
-    backgroundBottom: string;
-    glow: string;
-    canopy: string;
-    leafFill: [string, string, string];
-    leafStroke: string;
-    leafVein: string;
-    frondFill: [string, string];
-    vine: string;
-    bloomCore: string;
-    bloomPetal: string;
-    dew: string;
-    groundLayers: [string, string, string];
-    mist: string;
+    readonly name: string;
+    readonly backgroundTop: string;
+    readonly backgroundBottom: string;
+    readonly glow: string;
+    readonly canopy: string;
+    readonly leafFill: readonly [string, string, string];
+    readonly leafStroke: string;
+    readonly leafVein: string;
+    readonly frondFill: readonly [string, string];
+    readonly vine: string;
+    readonly bloomCore: string;
+    readonly bloomPetal: string;
+    readonly dew: string;
+    readonly groundLayers: readonly [string, string, string];
+    readonly mist: string;
 }
 
 export interface BotanicalOptions {
@@ -52,7 +53,7 @@ export interface BotanicalResult {
     counts: BotanicalCounts;
 }
 
-const THEMES: Record<string, BotanicalTheme> = {
+const THEMES = freezeCatalog({
     canopy: {
         name: "Forest Canopy",
         backgroundTop: "#0b2b2b",
@@ -121,7 +122,7 @@ const THEMES: Record<string, BotanicalTheme> = {
         groundLayers: ["#22184f", "#321d59", "#431c63"],
         mist: "#ffd6e0",
     },
-};
+} satisfies Record<string, BotanicalTheme>);
 
 export const BOTANICAL_THEMES = THEMES;
 
@@ -166,7 +167,7 @@ function pickTheme(rng: RNG, key: keyof typeof THEMES | "random"): BotanicalThem
         const entries = Object.values(THEMES);
         return entries[rng.int(0, entries.length - 1)];
     }
-    return THEMES[key];
+    return THEMES[catalogKey(THEMES, key, "theme")];
 }
 
 function resolveCounts(rng: RNG, options: BotanicalOptions): BotanicalCounts {

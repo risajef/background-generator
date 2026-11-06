@@ -59,3 +59,16 @@ test('SVG identifiers are unique and every fragment reference resolves', () => {
         assert.throws(()=>generate({idPrefix:'bad" onclick="bad'}), /idPrefix/);
     }
 });
+
+test('unknown and inherited catalog keys fail clearly; catalogs are immutable',()=>{
+    for(const [name,generate] of generators.filter(([name])=>name!=='background')) {
+        for(const theme of ['missing','constructor','__proto__']) assert.throws(()=>generate({theme}), /Unknown theme/);
+        const module=require(`../ts/lib/${name}`);
+        const catalog=module[`${name.toUpperCase()}_THEMES`];
+        const first=Object.values(catalog)[0];
+        assert.ok(Object.isFrozen(catalog)); assert.ok(Object.isFrozen(first));
+        const palette=Object.values(first).find(Array.isArray);
+        assert.ok(Object.isFrozen(palette));
+    }
+    assert.throws(()=>require('../ts/lib/polygalaxy').generatePolygalaxySvg({style:'constructor'}), /Unknown style/);
+});
