@@ -7,7 +7,7 @@ Procedural art playground written in TypeScript. It includes multiple SVG genera
 - Node.js 22.12+ (CI covers Node 22, 24, and 26)
 - `npm install` to pull `ts-node`, `typescript`, `esbuild`, and `sharp`
 
-The PNG export helper relies on `sharp`. Skip the PNG flags if you only need SVG.
+The PNG export helper requires a working `sharp` installation, included by `npm install`. Use `--no-png` for SVG-only output. If requested PNG export fails (including native module load errors), the CLI exits nonzero; an already written SVG is retained.
 
 ## CLI Generators
 

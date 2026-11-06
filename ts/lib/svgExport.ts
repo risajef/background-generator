@@ -1,32 +1,5 @@
+import { dimensions } from "./validation";
 type SharpModule = typeof import("sharp");
-
-let cachedSharp: SharpModule | null = null;
-let warnSharpMissing = false;
-
-async function loadSharp(): Promise<SharpModule | null> {
-    if (cachedSharp) {
-        return cachedSharp;
-    }
-    try {
-        const imported = (await import("sharp")) as SharpModule | { default?: SharpModule };
-        if (typeof imported === "function") {
-            cachedSharp = imported;
-        } else if (imported.default && typeof imported.default === "function") {
-            cachedSharp = imported.default;
-        }
-    } catch (error) {
-        if (!warnSharpMissing) {
-            console.warn("Install sharp to enable PNG export from TypeScript generators.");
-            warnSharpMissing = true;
-        }
-        return null;
-    }
-    if (!cachedSharp && !warnSharpMissing) {
-        console.warn("sharp loaded but had unexpected shape; skipping PNG export.");
-        warnSharpMissing = true;
-    }
-    return cachedSharp;
-}
 
 interface ConvertParams {
     svgPath: string;
@@ -36,17 +9,37 @@ interface ConvertParams {
     scale?: number;
 }
 
-export async function convertSvgToPng({ svgPath, svgContent, width, height, scale = 1 }: ConvertParams): Promise<string | null> {
-    const sharpModule = await loadSharp();
-    if (!sharpModule) {
-        return null;
+/** Dependency injection keeps native module failures observable and testable. */
+export function createPngConverter(loadModule: () => Promise<unknown> = () => import("sharp")) {
+    let cachedSharp: Promise<SharpModule> | null = null;
+    function loadSharp(): Promise<SharpModule> {
+        if (!cachedSharp) cachedSharp = (async () => {
+            try {
+                const imported = await loadModule();
+                const candidate = typeof imported === "function" ? imported
+                    : imported && typeof imported === "object" && "default" in imported ? imported.default : null;
+                if (typeof candidate !== "function") throw new TypeError("sharp has no callable export");
+                return candidate as SharpModule;
+            } catch (cause) {
+                const error = new Error("PNG export failed to load sharp. Install a working sharp build or use --no-png.");
+                throw Object.assign(error, { cause });
+            }
+        })();
+        return cachedSharp;
     }
-    const safeScale = Math.max(1, scale);
-    const density = Math.max(72, 72 * safeScale);
-    const pngPath = svgPath.replace(/\.svg$/i, ".png");
-    await sharpModule(Buffer.from(svgContent), { density })
-        .resize(width, height)
-        .png()
-        .toFile(pngPath);
-    return pngPath;
+    return async ({ svgPath, svgContent, width, height, scale = 1 }: ConvertParams): Promise<string> => {
+        dimensions(width, height);
+        if (!Number.isFinite(scale) || scale < 1 || scale > 4 || width * height * scale ** 2 > 67_108_864) {
+            throw new RangeError("PNG scale must be 1–4 within the 67,108,864 raster pixel budget");
+        }
+        if (!/\.svg$/i.test(svgPath)) throw new Error("PNG export requires a .svg output path");
+        const sharp = await loadSharp();
+        const pngPath = svgPath.replace(/\.svg$/i, ".png");
+        // Supersampling affects raster quality; the requested output dimensions stay fixed.
+        await sharp(Buffer.from(svgContent), { density: 72 * scale })
+            .resize(width, height).png().toFile(pngPath);
+        return pngPath;
+    };
 }
+
+export const convertSvgToPng = createPngConverter();
