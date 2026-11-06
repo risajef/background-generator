@@ -12,7 +12,7 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | 6. SVG-only export flags | Complete | All six CLIs use shared artifact writing and explicit skipPng; scale is separate. SVG-only filesystem regressions and CLI typecheck pass. |
 | 7. Catalog and registry types | Complete | Literal catalog/registry keys, own-property validation, deeply frozen catalogs and parsed browser values; inherited-key regressions, unused-local checks and typechecks pass. |
 | 8. Embedded UI isolation | Complete | Scoped all CSS to the app root, removed external theme dependency, added independent mount/unmount with local queries and instance-specific field IDs. Browser build and embedding checks pass; no parent loader edits. |
-| 9. Planet count semantics | Pending | |
+| 9. Planet count semantics | Complete | Exact totals (including zero), enough orbit capacity, actual rendered counts and separate requestedCounts; tests cover 0/1/3 systems and up to 1,000 planets. |
 | A. PNG dependency failures | Pending | |
 | B. Async browser state and worker isolation | Pending | |
 | C. CI and artifact consistency | Pending | |

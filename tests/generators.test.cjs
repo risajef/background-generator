@@ -72,3 +72,14 @@ test('unknown and inherited catalog keys fail clearly; catalogs are immutable',(
     }
     assert.throws(()=>require('../ts/lib/polygalaxy').generatePolygalaxySvg({style:'constructor'}), /Unknown style/);
 });
+
+test('polygalaxy renders exact requested planet counts, including zero',()=>{
+    const poly=require('../ts/lib/polygalaxy').generatePolygalaxySvg;
+    for(const systems of [0,1,3]) for(const planets of [0,1,5,100,1000]) {
+        const result=poly({seed:42,width:640,height:360,systems,planets,stars:0,facets:0,arms:0});
+        const rendered=[...result.svg.matchAll(/data-feature="planet"/g)].length;
+        assert.equal(rendered,systems===0?0:planets);
+        assert.equal(result.counts.planets,rendered);
+        assert.equal(result.requestedCounts.planets,planets);
+    }
+});

@@ -50,7 +50,8 @@ export interface PolygalaxyResult {
     svg: string;
     seed: number;
     theme: Theme;
-    counts: Record<string, number>;
+    counts: Record<keyof StylePreset, number>;
+    requestedCounts: Readonly<Record<keyof StylePreset, number>>;
 }
 
 const THEMES = freezeCatalog({
@@ -149,6 +150,7 @@ export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): Polygala
     const themeKey = options.theme ?? "random";
     const theme = pickTheme(rng, themeKey);
     const counts = resolveStyle(rng, options.style ?? "aura", options);
+    const requestedCounts = { ...counts };
     const builder = new SvgBuilder(width, height, options.idPrefix ?? "polygalaxy");
 
     addBackground(builder, theme);
@@ -156,7 +158,7 @@ export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): Polygala
     addGlowPortals(builder, theme, counts.glows, rng);
     addSpiralArms(builder, theme, counts.arms ?? 0, rng);
     addArcRings(builder, theme, counts.rings, rng);
-    addOrbitalSystems(builder, theme, counts.systems ?? 0, counts.planets ?? 0, rng);
+    counts.planets = addOrbitalSystems(builder, theme, counts.systems, counts.planets, rng);
     addSignalThreads(builder, theme, counts.threads, rng);
     addStarfield(builder, theme, counts.stars, rng);
     addConstellations(builder, theme, counts.constellations, rng);
@@ -169,6 +171,7 @@ export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): Polygala
         seed,
         theme,
         counts,
+        requestedCounts,
     };
 }
 
@@ -184,9 +187,9 @@ function resolveStyle(
     rng: RNG,
     style: keyof typeof STYLE_PRESETS,
     overrides: PolygalaxyOptions,
-): Record<string, number> {
+): Record<keyof StylePreset, number> {
     const preset = STYLE_PRESETS[catalogKey(STYLE_PRESETS, style, "style")];
-    const resolved: Record<string, number> = {};
+    const resolved = {} as Record<keyof StylePreset, number>;
     for (const key of Object.keys(preset) as Array<keyof StylePreset>) {
         const range = preset[key];
         resolved[key] = rng.int(range[0], range[1]);
@@ -307,21 +310,18 @@ function addOrbitalSystems(
     systems: number,
     planetBudget: number,
     rng: RNG,
-): void {
+): number {
     if (!systems) {
-        return;
+        return 0;
     }
     const minDim = Math.min(builder.width, builder.height);
-    const totalPlanets = planetBudget && planetBudget > 0 ? planetBudget : rng.int(systems * 3, systems * 6);
-    let remainingPlanets = Math.max(totalPlanets, systems);
+    let renderedPlanets = 0;
     for (let index = 0; index < systems; index += 1) {
         const cx = rng.float(0.2, 0.8) * builder.width;
         const cy = rng.float(0.2, 0.8) * builder.height;
-        const orbitCount = rng.int(2, 4);
+        let planetsForSystem = Math.floor(planetBudget / systems) + (index < planetBudget % systems ? 1 : 0);
+        const orbitCount = Math.max(rng.int(2, 4), Math.ceil(planetsForSystem / 3));
         const outerRadius = minDim * rng.float(0.08, 0.16);
-        const perSystemBase = Math.max(1, Math.floor(remainingPlanets / Math.max(1, systems - index)));
-        let planetsForSystem = Math.min(remainingPlanets, perSystemBase + rng.int(0, 2));
-        remainingPlanets -= planetsForSystem;
         const sunGrad = builder.uid("sun-core");
         builder.addDef(`
             <radialGradient id="${sunGrad}">
@@ -341,16 +341,17 @@ function addOrbitalSystems(
             if (planetsForSystem <= 0) {
                 continue;
             }
-            const planetsOnOrbit = Math.min(planetsForSystem, rng.int(1, 3));
+            const planetsOnOrbit = Math.min(3, Math.ceil(planetsForSystem / (orbitCount - orbit + 1)));
             planetsForSystem -= planetsOnOrbit;
             for (let p = 0; p < planetsOnOrbit; p += 1) {
+                renderedPlanets += 1;
                 const angle = rng.float(0, Math.PI * 2);
                 const px = cx + Math.cos(angle) * radius;
                 const py = cy + Math.sin(angle) * radius;
                 const pr = minDim * rng.float(0.004, 0.011);
                 const highlight = pr * rng.float(0.35, 0.6);
                 builder.addLayer(
-                    `<circle cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${pr.toFixed(3)}" fill="${theme.star}" opacity="0.85" />`,
+                    `<circle data-feature="planet" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="${pr.toFixed(3)}" fill="${theme.star}" opacity="0.85" />`,
                 );
                 builder.addLayer(
                     `<circle cx="${(px - highlight / 2).toFixed(1)}" cy="${(py - highlight / 2).toFixed(1)}" r="${(highlight / 2.2).toFixed(3)}" fill="${theme.accent}" opacity="0.5" />`,
@@ -362,10 +363,8 @@ function addOrbitalSystems(
                 );
             }
         }
-        if (planetsForSystem > 0 && index < systems - 1) {
-            remainingPlanets += planetsForSystem;
-        }
     }
+    return renderedPlanets;
 }
 
 function addGlowPortals(builder: SvgBuilder, theme: Theme, count: number, rng: RNG): void {
