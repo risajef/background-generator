@@ -1,3 +1,33 @@
+// ts/lib/svgBuilder.ts
+var SvgBuilder = class {
+  constructor(width, height, idPrefix) {
+    this.width = width;
+    this.height = height;
+    this.idPrefix = idPrefix;
+  }
+  defs = [];
+  layers = [];
+  counter = 0;
+  id(local) {
+    return `${this.idPrefix}-${local}`;
+  }
+  uid(prefix) {
+    return this.id(`${prefix}-${++this.counter}`);
+  }
+  addDef(snippet) {
+    this.defs.push(snippet.trim());
+  }
+  addLayer(snippet) {
+    this.layers.push(snippet.trim());
+  }
+  render() {
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
+<defs>${this.defs.join("\n")}</defs>
+${this.layers.join("\n")}
+</svg>`;
+  }
+};
+
 // ts/lib/validation.ts
 var LIMITS = { dimension: 8192, pixels: 16777216, complexity: 12e3 };
 function integer(name, value, min, max) {
@@ -12,6 +42,9 @@ function dimensions(width, height) {
 }
 function validateOptions(options, counts, booleans = []) {
   const values = options;
+  if (values.idPrefix !== void 0 && (typeof values.idPrefix !== "string" || !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(values.idPrefix))) {
+    throw new TypeError("idPrefix must start with a letter and contain at most 64 letters, digits, underscores or hyphens");
+  }
   dimensions(values.width ?? 5120, values.height ?? 1440);
   if (values.seed !== void 0) integer("seed", values.seed, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
   let complexity = 0;
@@ -182,7 +215,7 @@ function buildRadialGradient(id, inner, outer) {
         </radialGradient>
     `.trim();
 }
-function randomBlob(rng, width, height, palette) {
+function randomBlob(builder, rng, width, height, palette) {
   const cx = rng.float(0.2, 0.8) * width;
   const cy = rng.float(0.25, 0.75) * height;
   const radius = Math.min(width, height) * rng.float(0.12, 0.28);
@@ -214,13 +247,13 @@ function randomBlob(rng, width, height, palette) {
   const blur = rng.choice(BLUR_LEVELS);
   const fill = rng.choice(palette.blobColors);
   return `
-        <g opacity="${opacity.toFixed(2)}" filter="url(#blur${blur})">
+        <g opacity="${opacity.toFixed(2)}" filter="url(#${builder.id(`blur${blur}`)})">
             <path d="${segments.join(" ")}" fill="${fill}" />
         </g>
     `.trim();
 }
-function randomLightCone(rng, width, height, palette) {
-  const gradientId = `rad-${rng.int(0, 1e4)}`;
+function randomLightCone(builder, rng, width, height, palette) {
+  const gradientId = builder.uid("rad");
   const highlight = rng.choice([palette.highlight, palette.accentAlt]);
   const defs = buildRadialGradient(gradientId, highlight, palette.gradient[0]);
   const radius = Math.min(width, height) * rng.float(0.35, 0.55);
@@ -284,11 +317,11 @@ function randomOrbs(rng, width, height, palette, count) {
     return `<circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${radius.toFixed(1)}" fill="none" stroke="${stroke}" stroke-width="${(radius * 0.2).toFixed(1)}" opacity="0.4" />`;
   }).join("\n");
 }
-function randomGradientTriangles(rng, width, height, palette, count) {
+function randomGradientTriangles(builder, rng, width, height, palette, count) {
   const defs = [];
   const shapes = [];
   for (let i = 0; i < count; i += 1) {
-    const gradId = `tri-grad-${rng.int(0, 1e4)}`;
+    const gradId = builder.uid("tri-grad");
     defs.push(buildLinearGradient(gradId, [palette.highlight, palette.accent]));
     const points = Array.from({ length: 3 }, () => {
       const px = rng.float(-0.1, 1.1) * width;
@@ -299,7 +332,7 @@ function randomGradientTriangles(rng, width, height, palette, count) {
   }
   return [defs, shapes.join("\n")];
 }
-function randomSurfaceWave(rng, width, height, palette) {
+function randomSurfaceWave(builder, rng, width, height, palette) {
   const baseY = rng.float(0.35, 0.85) * height;
   const amplitude = height * rng.float(0.04, 0.12);
   const segments = 7;
@@ -318,17 +351,17 @@ function randomSurfaceWave(rng, width, height, palette) {
   }
   parts.push(`L ${width.toFixed(1)},${height.toFixed(1)}`);
   parts.push(`L 0,${height.toFixed(1)} Z`);
-  const gradId = `wave-grad-${rng.int(0, 1e4)}`;
+  const gradId = builder.uid("wave-grad");
   const defs = buildLinearGradient(gradId, [palette.accentAlt, palette.gradient[2]]);
   const shape = `
         <path d="${parts.join(" ")}" fill="url(#${gradId})" opacity="0.35" style="mix-blend-mode:screen;" />
     `.trim();
   return [defs, shape];
 }
-function getNoiseOverlay(rng, cache) {
+function getNoiseOverlay(builder, rng, cache) {
   if (!cache.value) {
-    const filterId = `grainFilter-${rng.int(0, 1e4)}`;
-    const symbolId = `grainSymbol-${rng.int(0, 1e4)}`;
+    const filterId = builder.uid("grainFilter");
+    const symbolId = builder.uid("grainSymbol");
     const defs = `
             <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="${rng.int(0, 1e4)}" result="noise" />
@@ -355,12 +388,13 @@ function resolveCount(rng, value, fallback) {
 }
 function createSvg(rng, options, palette) {
   const { width, height } = options;
-  const gradientId = `grad-${rng.int(0, 1e4)}`;
+  const builder = new SvgBuilder(width, height, options.idPrefix ?? "background");
+  const gradientId = builder.uid("grad");
   const defs = [buildLinearGradient(gradientId, palette.gradient)];
   BLUR_LEVELS.forEach((blur) => {
     defs.push(
       `
-            <filter id="blur${blur}" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="${builder.id(`blur${blur}`)}" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="${blur}" />
             </filter>
         `.trim()
@@ -375,7 +409,7 @@ function createSvg(rng, options, palette) {
   if (waveCount) {
     const waveLayers = [];
     for (let i = 0; i < waveCount; i += 1) {
-      const [waveDef, waveShape] = randomSurfaceWave(rng, width, height, palette);
+      const [waveDef, waveShape] = randomSurfaceWave(builder, rng, width, height, palette);
       defs.push(waveDef);
       waveLayers.push(waveShape);
     }
@@ -383,7 +417,7 @@ function createSvg(rng, options, palette) {
   }
   const triangleCount = resolveCount(rng, options.triangleCount, [1, 3]);
   if (triangleCount) {
-    const [triangleDefs, triangleShapes] = randomGradientTriangles(rng, width, height, palette, triangleCount);
+    const [triangleDefs, triangleShapes] = randomGradientTriangles(builder, rng, width, height, palette, triangleCount);
     defs.push(...triangleDefs);
     layers.push(triangleShapes);
   }
@@ -399,31 +433,26 @@ function createSvg(rng, options, palette) {
   }
   const blobCount = resolveCount(rng, options.blobCount, [2, 4]);
   if (blobCount) {
-    layers.push(Array.from({ length: blobCount }, () => randomBlob(rng, width, height, palette)).join("\n"));
+    layers.push(Array.from({ length: blobCount }, () => randomBlob(builder, rng, width, height, palette)).join("\n"));
   }
   const lightCount = resolveCount(rng, options.lightCount, [1, 2]);
   if (lightCount) {
     const lights = [];
     for (let i = 0; i < lightCount; i += 1) {
-      const [lightDef, lightShape] = randomLightCone(rng, width, height, palette);
+      const [lightDef, lightShape] = randomLightCone(builder, rng, width, height, palette);
       defs.push(lightDef);
       lights.push(lightShape);
     }
     layers.push(lights.join("\n"));
   }
   const noiseCache = { value: null };
-  const [noiseDefs, noiseOverlay] = getNoiseOverlay(rng, noiseCache);
+  const [noiseDefs, noiseOverlay] = getNoiseOverlay(builder, rng, noiseCache);
   defs.push(noiseDefs);
-  return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <defs>
-                ${defs.join("\n")}
-            </defs>
-            <rect width="100%" height="100%" fill="url(#${gradientId})" />
-            ${layers.join("\n")}
-            ${noiseOverlay}
-        </svg>
-    `.trim();
+  defs.forEach((def) => builder.addDef(def));
+  builder.addLayer(`<rect width="100%" height="100%" fill="url(#${gradientId})" />`);
+  layers.forEach((layer) => builder.addLayer(layer));
+  builder.addLayer(noiseOverlay);
+  return builder.render();
 }
 
 // ts/lib/polygalaxy.ts
@@ -510,33 +539,6 @@ var STYLE_PRESETS = {
 };
 var POLYGALAXY_THEMES = THEMES;
 var POLYGALAXY_STYLES = STYLE_PRESETS;
-var SvgBuilder = class {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-  }
-  defs = [];
-  layers = [];
-  counter = 0;
-  uid(prefix) {
-    this.counter += 1;
-    return `${prefix}-${this.counter}`;
-  }
-  addDef(snippet) {
-    this.defs.push(snippet.trim());
-  }
-  addLayer(snippet) {
-    this.layers.push(snippet.trim());
-  }
-  render() {
-    return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-  }
-};
 function generatePolygalaxySvg(options = {}) {
   validateOptions(options, { stars: [0, 3e3], facets: [0, 100, 20], rings: [0, 200, 5], threads: [0, 100, 10], glows: [0, 100, 10], constellations: [0, 100, 10], systems: [0, 30, 100], arms: [0, 30, 100], planets: [0, 1e3, 3] }, ["scanlines"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
@@ -546,7 +548,7 @@ function generatePolygalaxySvg(options = {}) {
   const themeKey = options.theme ?? "random";
   const theme = pickTheme(rng, themeKey);
   const counts = resolveStyle(rng, options.style ?? "aura", options);
-  const builder = new SvgBuilder(width, height);
+  const builder = new SvgBuilder(width, height, options.idPrefix ?? "polygalaxy");
   addBackground(builder, theme);
   addFacets(builder, theme, counts.facets, rng);
   addGlowPortals(builder, theme, counts.glows, rng);
@@ -920,33 +922,6 @@ var THEMES2 = {
   }
 };
 var TERRAIN_THEMES = THEMES2;
-var SceneBuilder = class {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-  }
-  defs = [];
-  layers = [];
-  counter = 0;
-  uid(prefix) {
-    this.counter += 1;
-    return `${prefix}-${this.counter}`;
-  }
-  addDef(snippet) {
-    this.defs.push(snippet.trim());
-  }
-  addLayer(snippet) {
-    this.layers.push(snippet.trim());
-  }
-  render() {
-    return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-  }
-};
 function generateTerrainSvg(options = {}) {
   validateOptions(options, { mountains: [1, 20, 50], trees: [0, 2e3, 2], clouds: [0, 300, 2] }, ["fog", "noise", "moon"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
@@ -954,7 +929,7 @@ function generateTerrainSvg(options = {}) {
   const width = options.width ?? 5120;
   const height = options.height ?? 1440;
   const theme = pickTheme2(rng, options.theme ?? "random");
-  const builder = new SceneBuilder(width, height);
+  const builder = new SvgBuilder(width, height, options.idPrefix ?? "terrain");
   addSky(builder, theme, options.moon ?? false);
   addClouds(builder, theme, options.clouds ?? 12, rng);
   addMountains(builder, theme, options.mountains ?? 3, rng);
@@ -1146,33 +1121,6 @@ var THEMES3 = {
   }
 };
 var SKYLINE_THEMES = THEMES3;
-var CityBuilder = class {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-  }
-  defs = [];
-  layers = [];
-  counter = 0;
-  uid(prefix) {
-    this.counter += 1;
-    return `${prefix}-${this.counter}`;
-  }
-  addDef(snippet) {
-    this.defs.push(snippet.trim());
-  }
-  addLayer(snippet) {
-    this.layers.push(snippet.trim());
-  }
-  render() {
-    return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-  }
-};
 function generateSkylineSvg(options = {}) {
   validateOptions(options, { layers: [1, 5] }, ["stars", "haze", "rooftopDetails", "water", "traffic"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
@@ -1180,7 +1128,7 @@ function generateSkylineSvg(options = {}) {
   const height = options.height ?? 1440;
   const rng = new RNG(seed);
   const theme = pickTheme3(rng, options.theme ?? "random");
-  const builder = new CityBuilder(width, height);
+  const builder = new SvgBuilder(width, height, options.idPrefix ?? "skyline");
   addSky2(builder, theme);
   addAurora(builder, theme);
   if (options.stars ?? true) {
@@ -1587,33 +1535,6 @@ var THEMES4 = {
   }
 };
 var BOTANICAL_THEMES = THEMES4;
-var GardenBuilder = class {
-  constructor(width, height) {
-    this.width = width;
-    this.height = height;
-  }
-  defs = [];
-  layers = [];
-  counter = 0;
-  uid(prefix) {
-    this.counter += 1;
-    return `${prefix}-${this.counter}`;
-  }
-  addDef(snippet) {
-    this.defs.push(snippet.trim());
-  }
-  addLayer(snippet) {
-    this.layers.push(snippet.trim());
-  }
-  render() {
-    return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-  }
-};
 function generateBotanicalSvg(options = {}) {
   validateOptions(options, { leaves: [0, 500, 5], fronds: [0, 200, 20], vines: [0, 100, 10], blooms: [0, 300, 10], dewDrops: [0, 2e3], groundLayers: [2, 6] }, ["veil", "noise"]);
   const seed = typeof options.seed === "number" && !Number.isNaN(options.seed) ? options.seed : Date.now();
@@ -1622,7 +1543,7 @@ function generateBotanicalSvg(options = {}) {
   const height = options.height ?? 1440;
   const theme = pickTheme4(rng, options.theme ?? "random");
   const counts = resolveCounts(rng, options);
-  const builder = new GardenBuilder(width, height);
+  const builder = new SvgBuilder(width, height, options.idPrefix ?? "botanical");
   addBackground2(builder, theme);
   addGlow(builder, theme);
   addCanopyBursts(builder, theme, rng);

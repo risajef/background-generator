@@ -6,7 +6,7 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | --- | --- | --- |
 | 1. Input validation and resource limits | Complete | Core validation of dimensions, pixels, counts, seeds, booleans, ranges and aggregate complexity; regression tests and browser build pass. Browser worker isolation will follow with UI orchestration. |
 | 2. Skyline building range | Complete | Each layer samples an exact count in the requested range; fixed and sampled range regression tests and browser build pass. |
-| 3. SVG ID collisions | Pending | |
+| 3. SVG ID collisions | Complete | Shared SVG builder, deterministic ID counters independent of art RNG, validated instance prefixes; uniqueness and reference-resolution tests and browser build pass. |
 | 4. CLI execution configuration | Pending | |
 | 5. Malformed CLI arguments | Pending | |
 | 6. SVG-only export flags | Pending | |

@@ -1,3 +1,4 @@
+import { SvgBuilder as CityBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
@@ -18,6 +19,7 @@ export interface SkylineTheme {
 }
 
 export interface SkylineOptions {
+    idPrefix?: string;
     width?: number;
     height?: number;
     seed?: number;
@@ -89,35 +91,6 @@ const THEMES: Record<string, SkylineTheme> = {
 
 export const SKYLINE_THEMES = THEMES;
 
-class CityBuilder {
-    private defs: string[] = [];
-    private layers: string[] = [];
-    private counter = 0;
-
-    constructor(public readonly width: number, public readonly height: number) {}
-
-    uid(prefix: string): string {
-        this.counter += 1;
-        return `${prefix}-${this.counter}`;
-    }
-
-    addDef(snippet: string): void {
-        this.defs.push(snippet.trim());
-    }
-
-    addLayer(snippet: string): void {
-        this.layers.push(snippet.trim());
-    }
-
-    render(): string {
-        return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-    }
-}
 
 interface LayerPlan {
     baseRatio: number;
@@ -136,7 +109,7 @@ export function generateSkylineSvg(options: SkylineOptions = {}): SkylineResult 
     const height = options.height ?? 1440;
     const rng = new RNG(seed);
     const theme = pickTheme(rng, options.theme ?? "random");
-    const builder = new CityBuilder(width, height);
+    const builder = new CityBuilder(width, height, options.idPrefix ?? "skyline");
 
     addSky(builder, theme);
     addAurora(builder, theme);

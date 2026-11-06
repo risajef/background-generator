@@ -1,3 +1,4 @@
+import { SvgBuilder as SceneBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
@@ -16,6 +17,7 @@ export interface BiomeTheme {
 }
 
 export interface TerrainOptions {
+    idPrefix?: string;
     width?: number;
     height?: number;
     seed?: number;
@@ -91,35 +93,6 @@ const THEMES: Record<string, BiomeTheme> = {
 
 export const TERRAIN_THEMES = THEMES;
 
-class SceneBuilder {
-    private defs: string[] = [];
-    private layers: string[] = [];
-    private counter = 0;
-
-    constructor(public readonly width: number, public readonly height: number) {}
-
-    uid(prefix: string): string {
-        this.counter += 1;
-        return `${prefix}-${this.counter}`;
-    }
-
-    addDef(snippet: string): void {
-        this.defs.push(snippet.trim());
-    }
-
-    addLayer(snippet: string): void {
-        this.layers.push(snippet.trim());
-    }
-
-    render(): string {
-        return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-    }
-}
 
 export function generateTerrainSvg(options: TerrainOptions = {}): TerrainResult {
     validateOptions(options, { mountains: [1, 20, 50], trees: [0, 2000, 2], clouds: [0, 300, 2] }, ["fog", "noise", "moon"]);
@@ -128,7 +101,7 @@ export function generateTerrainSvg(options: TerrainOptions = {}): TerrainResult 
     const width = options.width ?? 5120;
     const height = options.height ?? 1440;
     const theme = pickTheme(rng, options.theme ?? "random");
-    const builder = new SceneBuilder(width, height);
+    const builder = new SceneBuilder(width, height, options.idPrefix ?? "terrain");
 
     addSky(builder, theme, options.moon ?? false);
     addClouds(builder, theme, options.clouds ?? 12, rng);

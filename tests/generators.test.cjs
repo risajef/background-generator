@@ -44,3 +44,18 @@ test('skyline honors exact and sampled per-layer building ranges', () => {
         assert.ok(result.buildingCount >= 15 && result.buildingCount <= 24);
     }
 });
+
+test('SVG identifiers are unique and every fragment reference resolves', () => {
+    for (const [, generate] of generators) {
+        const assets = ['left','right'].map(idPrefix => generate({seed:1766,idPrefix,width:640,height:360}).svg);
+        const allIds = [];
+        for (const svg of assets) {
+            const ids = [...svg.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
+            assert.equal(new Set(ids).size, ids.length);
+            for (const match of svg.matchAll(/(?:url\(#|href="#)([^)" ]+)/g)) assert.ok(ids.includes(match[1]),match[1]);
+            allIds.push(...ids);
+        }
+        assert.equal(new Set(allIds).size,allIds.length);
+        assert.throws(()=>generate({idPrefix:'bad" onclick="bad'}), /idPrefix/);
+    }
+});

@@ -1,3 +1,4 @@
+import { SvgBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
@@ -26,6 +27,7 @@ export interface StylePreset {
 }
 
 export interface PolygalaxyOptions {
+    idPrefix?: string;
     width?: number;
     height?: number;
     seed?: number;
@@ -136,35 +138,6 @@ const STYLE_PRESETS: Record<string, StylePreset> = {
 export const POLYGALAXY_THEMES = THEMES;
 export const POLYGALAXY_STYLES = STYLE_PRESETS;
 
-class SvgBuilder {
-    private defs: string[] = [];
-    private layers: string[] = [];
-    private counter = 0;
-
-    constructor(public readonly width: number, public readonly height: number) {}
-
-    uid(prefix: string): string {
-        this.counter += 1;
-        return `${prefix}-${this.counter}`;
-    }
-
-    addDef(snippet: string): void {
-        this.defs.push(snippet.trim());
-    }
-
-    addLayer(snippet: string): void {
-        this.layers.push(snippet.trim());
-    }
-
-    render(): string {
-        return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-    }
-}
 
 export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): PolygalaxyResult {
     validateOptions(options, { stars: [0, 3000], facets: [0, 100, 20], rings: [0, 200, 5], threads: [0, 100, 10], glows: [0, 100, 10], constellations: [0, 100, 10], systems: [0, 30, 100], arms: [0, 30, 100], planets: [0, 1000, 3] }, ["scanlines"]);
@@ -175,7 +148,7 @@ export function generatePolygalaxySvg(options: PolygalaxyOptions = {}): Polygala
     const themeKey = options.theme ?? "random";
     const theme = pickTheme(rng, themeKey);
     const counts = resolveStyle(rng, options.style ?? "aura", options);
-    const builder = new SvgBuilder(width, height);
+    const builder = new SvgBuilder(width, height, options.idPrefix ?? "polygalaxy");
 
     addBackground(builder, theme);
     addFacets(builder, theme, counts.facets, rng);

@@ -1,3 +1,4 @@
+import { SvgBuilder as GardenBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
@@ -20,6 +21,7 @@ export interface BotanicalTheme {
 }
 
 export interface BotanicalOptions {
+    idPrefix?: string;
     width?: number;
     height?: number;
     seed?: number;
@@ -123,35 +125,6 @@ const THEMES: Record<string, BotanicalTheme> = {
 
 export const BOTANICAL_THEMES = THEMES;
 
-class GardenBuilder {
-    private defs: string[] = [];
-    private layers: string[] = [];
-    private counter = 0;
-
-    constructor(public readonly width: number, public readonly height: number) {}
-
-    uid(prefix: string): string {
-        this.counter += 1;
-        return `${prefix}-${this.counter}`;
-    }
-
-    addDef(snippet: string): void {
-        this.defs.push(snippet.trim());
-    }
-
-    addLayer(snippet: string): void {
-        this.layers.push(snippet.trim());
-    }
-
-    render(): string {
-        return `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${this.width}" height="${this.height}" viewBox="0 0 ${this.width} ${this.height}">
-                <defs>${this.defs.join(" ")}</defs>
-                ${this.layers.join(" ")}
-            </svg>
-        `.trim();
-    }
-}
 
 export function generateBotanicalSvg(options: BotanicalOptions = {}): BotanicalResult {
     validateOptions(options, { leaves: [0, 500, 5], fronds: [0, 200, 20], vines: [0, 100, 10], blooms: [0, 300, 10], dewDrops: [0, 2000], groundLayers: [2, 6] }, ["veil", "noise"]);
@@ -161,7 +134,7 @@ export function generateBotanicalSvg(options: BotanicalOptions = {}): BotanicalR
     const height = options.height ?? 1440;
     const theme = pickTheme(rng, options.theme ?? "random");
     const counts = resolveCounts(rng, options);
-    const builder = new GardenBuilder(width, height);
+    const builder = new GardenBuilder(width, height, options.idPrefix ?? "botanical");
 
     addBackground(builder, theme);
     addGlow(builder, theme);

@@ -1,3 +1,4 @@
+import { SvgBuilder } from "./svgBuilder";
 import { validateOptions } from "./validation";
 import { RNG } from "./rng";
 
@@ -14,6 +15,7 @@ const CURATED_PALETTES: Array<[string, string, string]> = [
 const BLUR_LEVELS = [6, 12, 24];
 
 export interface BackgroundOptions {
+    idPrefix?: string;
     width?: number;
     height?: number;
     seed?: number;
@@ -42,6 +44,7 @@ interface PalettePlan {
 }
 
 interface ResolvedBackgroundOptions {
+    idPrefix?: string;
     width: number;
     height: number;
     seed: number;
@@ -173,7 +176,7 @@ function buildRadialGradient(id: string, inner: string, outer: string): string {
     `.trim();
 }
 
-function randomBlob(rng: RNG, width: number, height: number, palette: PalettePlan): string {
+function randomBlob(builder: SvgBuilder, rng: RNG, width: number, height: number, palette: PalettePlan): string {
     const cx = rng.float(0.2, 0.8) * width;
     const cy = rng.float(0.25, 0.75) * height;
     const radius = Math.min(width, height) * rng.float(0.12, 0.28);
@@ -205,14 +208,14 @@ function randomBlob(rng: RNG, width: number, height: number, palette: PalettePla
     const blur = rng.choice(BLUR_LEVELS);
     const fill = rng.choice(palette.blobColors);
     return `
-        <g opacity="${opacity.toFixed(2)}" filter="url(#blur${blur})">
+        <g opacity="${opacity.toFixed(2)}" filter="url(#${builder.id(`blur${blur}`)})">
             <path d="${segments.join(" ")}" fill="${fill}" />
         </g>
     `.trim();
 }
 
-function randomLightCone(rng: RNG, width: number, height: number, palette: PalettePlan): [string, string] {
-    const gradientId = `rad-${rng.int(0, 10000)}`;
+function randomLightCone(builder: SvgBuilder, rng: RNG, width: number, height: number, palette: PalettePlan): [string, string] {
+    const gradientId = builder.uid("rad");
     const highlight = rng.choice([palette.highlight, palette.accentAlt]);
     const defs = buildRadialGradient(gradientId, highlight, palette.gradient[0]);
     const radius = Math.min(width, height) * rng.float(0.35, 0.55);
@@ -280,7 +283,7 @@ function randomOrbs(rng: RNG, width: number, height: number, palette: PalettePla
     }).join("\n");
 }
 
-function randomGradientTriangles(
+function randomGradientTriangles(builder: SvgBuilder, 
     rng: RNG,
     width: number,
     height: number,
@@ -290,7 +293,7 @@ function randomGradientTriangles(
     const defs: string[] = [];
     const shapes: string[] = [];
     for (let i = 0; i < count; i += 1) {
-        const gradId = `tri-grad-${rng.int(0, 10000)}`;
+        const gradId = builder.uid("tri-grad");
         defs.push(buildLinearGradient(gradId, [palette.highlight, palette.accent]));
         const points = Array.from({ length: 3 }, () => {
             const px = rng.float(-0.1, 1.1) * width;
@@ -302,7 +305,7 @@ function randomGradientTriangles(
     return [defs, shapes.join("\n")];
 }
 
-function randomSurfaceWave(
+function randomSurfaceWave(builder: SvgBuilder, 
     rng: RNG,
     width: number,
     height: number,
@@ -326,7 +329,7 @@ function randomSurfaceWave(
     }
     parts.push(`L ${width.toFixed(1)},${height.toFixed(1)}`);
     parts.push(`L 0,${height.toFixed(1)} Z`);
-    const gradId = `wave-grad-${rng.int(0, 10000)}`;
+    const gradId = builder.uid("wave-grad");
     const defs = buildLinearGradient(gradId, [palette.accentAlt, palette.gradient[2]]);
     const shape = `
         <path d="${parts.join(" ")}" fill="url(#${gradId})" opacity="0.35" style="mix-blend-mode:screen;" />
@@ -334,10 +337,10 @@ function randomSurfaceWave(
     return [defs, shape];
 }
 
-function getNoiseOverlay(rng: RNG, cache: { value: [string, string] | null }): [string, string] {
+function getNoiseOverlay(builder: SvgBuilder, rng: RNG, cache: { value: [string, string] | null }): [string, string] {
     if (!cache.value) {
-        const filterId = `grainFilter-${rng.int(0, 10000)}`;
-        const symbolId = `grainSymbol-${rng.int(0, 10000)}`;
+        const filterId = builder.uid("grainFilter");
+        const symbolId = builder.uid("grainSymbol");
         const defs = `
             <filter id="${filterId}" x="-20%" y="-20%" width="140%" height="140%">
                 <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="${rng.int(0, 10000)}" result="noise" />
@@ -366,13 +369,14 @@ function resolveCount(rng: RNG, value: number | null | undefined, fallback: [num
 
 function createSvg(rng: RNG, options: ResolvedBackgroundOptions, palette: PalettePlan): string {
     const { width, height } = options;
-    const gradientId = `grad-${rng.int(0, 10000)}`;
+    const builder = new SvgBuilder(width, height, options.idPrefix ?? "background");
+    const gradientId = builder.uid("grad");
     const defs: string[] = [buildLinearGradient(gradientId, palette.gradient)];
 
     BLUR_LEVELS.forEach((blur) => {
         defs.push(
             `
-            <filter id="blur${blur}" x="-20%" y="-20%" width="140%" height="140%">
+            <filter id="${builder.id(`blur${blur}`)}" x="-20%" y="-20%" width="140%" height="140%">
                 <feGaussianBlur stdDeviation="${blur}" />
             </filter>
         `.trim(),
@@ -390,7 +394,7 @@ function createSvg(rng: RNG, options: ResolvedBackgroundOptions, palette: Palett
     if (waveCount) {
         const waveLayers: string[] = [];
         for (let i = 0; i < waveCount; i += 1) {
-            const [waveDef, waveShape] = randomSurfaceWave(rng, width, height, palette);
+            const [waveDef, waveShape] = randomSurfaceWave(builder, rng, width, height, palette);
             defs.push(waveDef);
             waveLayers.push(waveShape);
         }
@@ -399,7 +403,7 @@ function createSvg(rng: RNG, options: ResolvedBackgroundOptions, palette: Palett
 
     const triangleCount = resolveCount(rng, options.triangleCount, [1, 3]);
     if (triangleCount) {
-        const [triangleDefs, triangleShapes] = randomGradientTriangles(rng, width, height, palette, triangleCount);
+        const [triangleDefs, triangleShapes] = randomGradientTriangles(builder, rng, width, height, palette, triangleCount);
         defs.push(...triangleDefs);
         layers.push(triangleShapes);
     }
@@ -418,14 +422,14 @@ function createSvg(rng: RNG, options: ResolvedBackgroundOptions, palette: Palett
 
     const blobCount = resolveCount(rng, options.blobCount, [2, 4]);
     if (blobCount) {
-        layers.push(Array.from({ length: blobCount }, () => randomBlob(rng, width, height, palette)).join("\n"));
+        layers.push(Array.from({ length: blobCount }, () => randomBlob(builder, rng, width, height, palette)).join("\n"));
     }
 
     const lightCount = resolveCount(rng, options.lightCount, [1, 2]);
     if (lightCount) {
         const lights: string[] = [];
         for (let i = 0; i < lightCount; i += 1) {
-            const [lightDef, lightShape] = randomLightCone(rng, width, height, palette);
+            const [lightDef, lightShape] = randomLightCone(builder, rng, width, height, palette);
             defs.push(lightDef);
             lights.push(lightShape);
         }
@@ -433,17 +437,12 @@ function createSvg(rng: RNG, options: ResolvedBackgroundOptions, palette: Palett
     }
 
     const noiseCache = { value: null as [string, string] | null };
-    const [noiseDefs, noiseOverlay] = getNoiseOverlay(rng, noiseCache);
+    const [noiseDefs, noiseOverlay] = getNoiseOverlay(builder, rng, noiseCache);
     defs.push(noiseDefs);
 
-    return `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
-            <defs>
-                ${defs.join("\n")}
-            </defs>
-            <rect width="100%" height="100%" fill="url(#${gradientId})" />
-            ${layers.join("\n")}
-            ${noiseOverlay}
-        </svg>
-    `.trim();
+    defs.forEach((def) => builder.addDef(def));
+    builder.addLayer(`<rect width="100%" height="100%" fill="url(#${gradientId})" />`);
+    layers.forEach((layer) => builder.addLayer(layer));
+    builder.addLayer(noiseOverlay);
+    return builder.render();
 }

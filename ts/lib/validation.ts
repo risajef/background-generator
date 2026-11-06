@@ -16,6 +16,9 @@ export function dimensions(width: unknown, height: unknown): void {
 type Rule = readonly [min: number, max: number, weight?: number];
 export function validateOptions(options: object, counts: Record<string, Rule>, booleans: readonly string[] = []): void {
     const values = options as Record<string, unknown>;
+    if (values.idPrefix !== undefined && (typeof values.idPrefix !== "string" || !/^[A-Za-z][A-Za-z0-9_-]{0,63}$/.test(values.idPrefix))) {
+        throw new TypeError("idPrefix must start with a letter and contain at most 64 letters, digits, underscores or hyphens");
+    }
     dimensions(values.width ?? 5120, values.height ?? 1440);
     if (values.seed !== undefined) integer("seed", values.seed, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER);
     let complexity = 0;

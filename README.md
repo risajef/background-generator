@@ -101,3 +101,7 @@ Open `http://localhost:8080` (or whichever port your static server uses) to fidd
 - `outputs/` & `ts-outputs/` – Example render targets ignored by git.
 
 Feel free to mix and match pieces—every generator exposes a `generate*Svg` function that returns `{ svg, seed, ... }`, so you can embed them inside your own pipelines.
+
+### Inline SVG identifiers
+
+When composing multiple SVGs into one document, pass a unique `idPrefix` (for example `scene1`, `scene2`) to each generator call. The default prefix is the generator name. IDs use a scene-local counter independent of the art RNG; repeated options and prefix produce identical SVG.
