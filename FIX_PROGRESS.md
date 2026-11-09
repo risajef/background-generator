@@ -17,3 +17,9 @@ Scope: background-generator subrepository only. No parent website changes, paren
 | B. Async browser state and worker isolation | Complete | Immutable export snapshots, revision-checked results/status, independent worker per request with cancellation/timeout, separated config and raster modules. Worker lifecycle tests, typechecks, and browser generate/export race tests pass. |
 | C. CI and artifact consistency | Complete | Added Node 22/24/26 CI checks, Node 24 browser checks, all-generator Sharp decoding, and a non-mutating bundle/source-map consistency gate. Local full suite and browser suite pass on Node 26; other Node versions await CI execution. |
 | D. Sharp advisory discovered during verification | Complete | Upgraded Sharp to 0.35.5 and adapted its ESM default-export type/tests. npm audit reports zero advisories; real PNG dimension and all-generator raster checks pass. |
+
+## CI follow-up: browser system dependencies (9 November 2026)
+
+The first hosted Node 24 browser setup failed because Puppeteer's `--install-deps` requires root privileges. The workflow now invokes the locked local CLI through `sudo`, preserves the setup-node PATH, and explicitly uses the runner user's Puppeteer cache so the subsequent unprivileged browser tests find the installed Chrome. `--no-install` prevents npx from fetching a different CLI.
+
+Validation: workflow YAML and shell syntax pass; `npm run check` passes both TypeScript checks, all 25 regressions and bundle/source-map consistency; `npm run test:browser` passes with installed Chrome 131. The privileged Ubuntu package-install step requires verification on GitHub's runner after pushing.

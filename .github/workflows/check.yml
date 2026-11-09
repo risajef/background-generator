@@ -22,6 +22,6 @@ jobs:
       - run: npm ci
       - run: npm run check
       - if: matrix.node == 24
-        run: npx puppeteer browsers install chrome --install-deps
+        run: sudo env "PATH=$PATH" "PUPPETEER_CACHE_DIR=$HOME/.cache/puppeteer" npx --no-install puppeteer browsers install chrome --install-deps
       - if: matrix.node == 24
         run: npm run test:browser
